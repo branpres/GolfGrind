@@ -1,0 +1,9 @@
+<span class="term-help"
+      tabindex="0"
+      data-tooltip="@Description"
+      aria-label="@($"{Text}: {Description}")">@Text</span>
+
+@code {
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+    [Parameter, EditorRequired] public string Description { get; set; } = "";
+}

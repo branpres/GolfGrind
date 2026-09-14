@@ -1,0 +1,9 @@
+<div class="mode-workspace">
+    <RangeGraphic LastShot="LastShot" />
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public ShotData? LastShot { get; set; }
+    [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
+}

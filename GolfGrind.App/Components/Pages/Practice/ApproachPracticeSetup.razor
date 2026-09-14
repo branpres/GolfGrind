@@ -1,0 +1,16 @@
+<div class="approach-mode-grid" role="group" aria-label="Approach distance mode">
+    <button class="approach-mode-choice @(Options.ApproachDistanceMode == ScoringDistanceMode.Carry ? "active" : "")" @onclick="() => Options.ApproachDistanceMode = ScoringDistanceMode.Carry">
+        <strong>Carry</strong><span>Use where the ball lands</span>
+    </button>
+    <button class="approach-mode-choice @(Options.ApproachDistanceMode == ScoringDistanceMode.Total ? "active" : "")" @onclick="() => Options.ApproachDistanceMode = ScoringDistanceMode.Total">
+        <strong>Total</strong><span>Include rollout distance</span>
+    </button>
+</div>
+<RangeSetting Label="Target distance" Value="@Options.FixedTargetYards" ValueText="@($"{Options.FixedTargetYards:0} yd")" Minimum="10" Maximum="350" ValueChanged="value => Options.FixedTargetYards = value" />
+<RangeSetting Label="Shots" Value="@Options.ShotGoal" ValueText="@Options.ShotGoal.ToString()" Minimum="1" Maximum="100" ValueChanged="value => Options.ShotGoal = (int)value" />
+<RangeSetting Label="Green radius" Help="The distance from the target to the edge of the circular practice green." Value="@Options.ToleranceYards" ValueText="@($"{Options.ToleranceYards:0} yd")" Minimum="1" Maximum="50" ValueChanged="value => Options.ToleranceYards = value" />
+<div class="combine-note">@(Options.ApproachDistanceMode == ScoringDistanceMode.Carry ? "Score one point when the ball lands on the green." : "Score one point when the ball finishes on the green after rollout.")</div>
+
+@code {
+    [Parameter, EditorRequired] public PracticeGameOptions Options { get; set; } = new();
+}

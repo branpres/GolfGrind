@@ -1,0 +1,44 @@
+@if (State.Attempts.Count > 0)
+{
+    <div class="fairway-pattern-card">
+        <div class="section-heading">
+            <div><strong>Shot pattern</strong><span class="muted">Green markers met both the fairway-width and minimum-carry goals.</span></div>
+            <span class="muted">Average finish: @Bias · lateral spread: @Spread</span>
+        </div>
+        <svg class="fairway-pattern" viewBox="0 0 520 190" role="img" aria-label="Fairway Finder shot pattern">
+            <rect class="fairway-zone" x="@X(-State.Settings.FairwayWidthYards / 2)" y="12" width="@(X(State.Settings.FairwayWidthYards / 2) - X(-State.Settings.FairwayWidthYards / 2))" height="152" rx="8" />
+            <line class="fairway-center-line" x1="@X(0)" y1="12" x2="@X(0)" y2="164" />
+            @foreach (var attempt in State.Attempts.Where(attempt => attempt.OfflineYards is not null))
+            {
+                <circle class="@(attempt.HitTarget ? "fairway-hit" : "fairway-miss")" cx="@X(attempt.OfflineYards!.Value)" cy="@Y(attempt.ShotNumber)" r="6">
+                    <title>Shot @attempt.ShotNumber: @Direction(attempt.OfflineYards), carry @(attempt.CarryYards?.ToString("0.0") ?? "—") yd · @(attempt.HitTarget ? "fairway" : "miss")</title>
+                </circle>
+            }
+            <text class="fairway-pattern-label" x="40" y="183">Left</text>
+            <text class="fairway-pattern-label" x="480" y="183" text-anchor="end">Right</text>
+        </svg>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public PracticeGameState State { get; set; } = new();
+    private FairwayFinderStatistics Statistics => FairwayFinderRules.Calculate(State.Attempts);
+    private string Bias => Direction(Statistics.AverageOfflineYards);
+    private string Spread => Statistics.Shots == 0 ? "—" : $"{Direction(Statistics.LeftEdgeYards)} to {Direction(Statistics.RightEdgeYards)} ({Statistics.DispersionWidthYards:0.0} yd)";
+    private double PlotLimit
+    {
+        get
+        {
+            var widestShot = State.Attempts.Where(attempt => attempt.OfflineYards is not null).Select(attempt => Math.Abs(attempt.OfflineYards!.Value)).DefaultIfEmpty(0).Max();
+            return Math.Max(10, Math.Max(State.Settings.FairwayWidthYards * 0.7, widestShot * 1.15));
+        }
+    }
+    private double X(double offlineYards) => 40 + ((offlineYards + PlotLimit) / (PlotLimit * 2) * 440);
+    private double Y(int shotNumber) => 25 + ((shotNumber - 1d) / Math.Max(1, State.Settings.ShotGoal - 1) * 126);
+    private static string Direction(double? offlineYards)
+    {
+        if (offlineYards is null) return "—";
+        if (Math.Abs(offlineYards.Value) < 0.05) return "center";
+        return $"{Math.Abs(offlineYards.Value):0.0} yd {(offlineYards.Value < 0 ? "left" : "right")}";
+    }
+}

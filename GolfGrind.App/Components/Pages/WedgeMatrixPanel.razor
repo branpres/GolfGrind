@@ -1,0 +1,109 @@
+<ActivityWorkspace LastShot="LastShot">
+    <section class="card analytics-card mode-control-card">
+        <div class="section-heading">
+            <div>
+                <h2>Wedge matrix</h2>
+                <span class="muted">Median carry for each wedge and swing length. New runs begin with ½ swing, followed by ¾ and full swings.</span>
+            </div>
+        </div>
+        @if (Wedges.Count > 0)
+        {
+            <div class="wedge-shot-controls">
+                <div class="control-group-label">Starting combination / manual recording</div>
+                <label>
+                    <span>Wedge</span>
+                    <select aria-label="Wedge" value="@SelectedClubId" disabled="@GuideActive" @onchange="ChangeClubAsync">
+                        @foreach (var wedge in Wedges)
+                        {
+                            <option value="@wedge.Id">@wedge.DisplayName</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    <span>Swing length</span>
+                    <select aria-label="Wedge swing length" @bind:get="SelectedSwing" @bind:set="ChangeSwingAsync" disabled="@GuideActive">
+                        <option value="Half">½ swing</option>
+                        <option value="ThreeQuarter">¾ swing</option>
+                        <option value="Full">Full swing</option>
+                    </select>
+                </label>
+                <span class="muted">Manual shots use these tags. A guided matrix starts here and continues through the remaining combinations.</span>
+            </div>
+        }
+        <div class="practice-setup wedge-guide-setup">
+            <label><span>Shots per combination</span><input type="number" min="1" max="20" value="@ShotsPerCell" @onchange="ChangeShotsPerCellAsync" /></label>
+            @if (!GuideActive)
+            {
+                <button class="primary" @onclick="StartGuide">Start from selected</button>
+            }
+            else
+            {
+                <button class="danger" @onclick="StopGuide">Stop guide</button>
+            }
+        </div>
+        @if (GuideActive)
+        {
+            <div class="practice-prompt">
+                <span class="eyebrow">Next shot</span>
+                <strong>@GuidePrompt</strong>
+                <span>@(ShotInCell + 1) of @ShotsPerCell for this combination</span>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <div class="practice-result">@Message</div>
+        }
+        <div class="table-wrap">
+            <table class="wedge-matrix">
+                <thead><tr>
+                    <th>Wedge</th>
+                    <th><TermHelp Text="½ swing" Description="Median carry from retained half-swing shots with this wedge." /></th>
+                    <th><TermHelp Text="¾ swing" Description="Median carry from retained three-quarter-swing shots with this wedge." /></th>
+                    <th><TermHelp Text="Full swing" Description="Median carry from retained full-swing shots with this wedge." /></th>
+                </tr></thead>
+                <tbody>
+                @foreach (var wedge in Wedges)
+                {
+                    var wedgeShots = ShotAnalytics.WedgeMatrixShotsForClub(wedge, Sessions);
+                    <tr>
+                        <td>@wedge.DisplayName</td>
+                        @foreach (var swingType in SwingTypes)
+                        {
+                            var cell = ShotAnalytics.CalculateWedgeCell(wedgeShots, swingType);
+                            <td>@Cell(cell)</td>
+                        }
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</ActivityWorkspace>
+
+@code {
+    private static readonly string[] SwingTypes = ["Half", "ThreeQuarter", "Full"];
+    [Parameter] public ShotData? LastShot { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<GolfClub> Clubs { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<PracticeSession> Sessions { get; set; } = [];
+    [Parameter] public Guid SelectedClubId { get; set; }
+    [Parameter] public string SelectedSwing { get; set; } = "Half";
+    [Parameter] public bool GuideActive { get; set; }
+    [Parameter] public int ShotsPerCell { get; set; }
+    [Parameter] public int ShotInCell { get; set; }
+    [Parameter] public string GuidePrompt { get; set; } = "";
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public EventCallback<Guid> SelectedClubIdChanged { get; set; }
+    [Parameter] public EventCallback<string> SelectedSwingChanged { get; set; }
+    [Parameter] public EventCallback<int> ShotsPerCellChanged { get; set; }
+    [Parameter] public EventCallback StartGuide { get; set; }
+    [Parameter] public EventCallback StopGuide { get; set; }
+    private IReadOnlyList<GolfClub> Wedges => Clubs.Where(club => club.Kind == GolfClubKind.Wedge).ToList();
+    private Task ChangeClubAsync(ChangeEventArgs args) => Guid.TryParse(args.Value?.ToString(), out var id)
+        ? SelectedClubIdChanged.InvokeAsync(id)
+        : Task.CompletedTask;
+    private Task ChangeSwingAsync(string swing) => SelectedSwingChanged.InvokeAsync(string.IsNullOrWhiteSpace(swing) ? "Half" : swing);
+    private Task ChangeShotsPerCellAsync(ChangeEventArgs args) => int.TryParse(args.Value?.ToString(), out var value)
+        ? ShotsPerCellChanged.InvokeAsync(value)
+        : Task.CompletedTask;
+    private static string Cell(WedgeMatrixCell cell) => cell.MedianCarryYards is null ? "—" : $"{cell.MedianCarryYards:0.0} yd";
+}

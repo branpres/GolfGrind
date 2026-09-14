@@ -1,0 +1,12 @@
+<nav class="card app-nav" aria-label="Application sections">
+    @foreach (var view in Views)
+    {
+        <button class="@(ActiveView == view ? "active" : "")" @onclick="() => ViewSelected.InvokeAsync(view)">@view</button>
+    }
+</nav>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<string> Views { get; set; } = [];
+    [Parameter, EditorRequired] public string ActiveView { get; set; } = "Range";
+    [Parameter] public EventCallback<string> ViewSelected { get; set; }
+}

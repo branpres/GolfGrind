@@ -1,0 +1,100 @@
+<div class="practice-live-grid @(State.Game is PracticeGameKind.ApproachPractice or PracticeGameKind.FairwayFinder or PracticeGameKind.GolfCombine or PracticeGameKind.SkillsAssessment ? "approach-live-grid" : "")">
+    <div class="practice-prompt">
+        <span class="eyebrow">@(State.Game == PracticeGameKind.FairwayFinder ? "Fairway" : "Target")</span>
+        <strong>@Prompt</strong>
+        @if (State.Game == PracticeGameKind.SkillsAssessment)
+        {
+            <span class="practice-target-detail">@SkillsScoringDetail</span>
+        }
+        @if (!string.IsNullOrWhiteSpace(State.RecommendedClub))
+        {
+            <span>
+                @RecommendationLabel: @State.RecommendedClub
+                @if (!string.IsNullOrWhiteSpace(State.RecommendedSwing))
+                {
+                    <text> · @SwingLabel(State.RecommendedSwing)</text>
+                }
+            </span>
+        }
+        <span>@Progress</span>
+    </div>
+    <div class="practice-score"><span>@ScoreLabel</span><strong>@ScoreValue</strong></div>
+    @if (State.Game == PracticeGameKind.ApproachPractice)
+    {
+        <div class="practice-score"><span>Greens hit</span><strong>@State.TargetsHit / @State.ShotsTaken</strong></div>
+    }
+    @if (State.Game == PracticeGameKind.FairwayFinder)
+    {
+        <div class="practice-score"><span>Fairways hit</span><strong>@State.TargetsHit / @State.ShotsTaken</strong></div>
+    }
+    @if (State.Game == PracticeGameKind.SkillsAssessment)
+    {
+        <div class="practice-score"><span>Stations scored</span><strong>@State.TargetsHit / @State.ShotsTaken</strong></div>
+    }
+    <div class="practice-score"><span>Last result</span><strong>@LastResult</strong></div>
+    @if (State.Game == PracticeGameKind.PressureStreak)
+    {
+        <div class="practice-score"><span>Streak</span><strong>@State.CurrentStreak</strong></div>
+    }
+    <div class="practice-action-row"><button class="danger" @onclick="EndGame">End Practice</button></div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PracticeGameState State { get; set; } = new();
+    [Parameter] public EventCallback EndGame { get; set; }
+
+    private string Prompt => State.Game switch
+    {
+        PracticeGameKind.FairwayFinder => $"{State.Settings.FairwayWidthYards:0} yd wide · {State.Settings.MinimumCarryYards:0} yd minimum carry",
+        PracticeGameKind.ApproachPractice => $"{State.CurrentTargetYards:0} yards · {State.Settings.ToleranceYards:0} yd green radius · {ApproachModeLabel}",
+        PracticeGameKind.SkillsAssessment when State.CurrentTargetYards is { } target => $"{target:0} yards",
+        PracticeGameKind.GolfCombine when State.IsDriverTarget => $"Driver · {State.Settings.CombineDriverTargetYards:0} yd benchmark",
+        _ => State.CurrentTargetYards is { } target ? $"{target:0} yards" : "Preparing target"
+    };
+    private string Progress => State.Game switch
+    {
+        PracticeGameKind.DistanceLadder => $"{State.ShotsTaken} attempts",
+        PracticeGameKind.PressureStreak => $"{State.Misses} of {State.Settings.MissesAllowed} misses",
+        PracticeGameKind.SkillsAssessment => $"Station {Math.Min(State.ShotsTaken + 1, State.Settings.SkillsStationCount)} of {State.Settings.SkillsStationCount}",
+        PracticeGameKind.GolfCombine => CombineProgress,
+        _ => $"Shot {Math.Min(State.ShotsTaken + 1, State.Settings.ShotGoal)} of {State.Settings.ShotGoal}"
+    };
+    private string LastResult => State.Game is PracticeGameKind.FairwayFinder or PracticeGameKind.ApproachPractice or PracticeGameKind.GolfCombine or PracticeGameKind.SkillsAssessment
+        ? State.LastResultLabel ?? "—"
+        : State.LastProximityYards is null ? "—" : $"{State.LastProximityYards:0.0} yd";
+    private string ScoreLabel => State.Game switch
+    {
+        PracticeGameKind.FairwayFinder => "Hit rate",
+        PracticeGameKind.GolfCombine or PracticeGameKind.SkillsAssessment => "Average score",
+        _ => "Score"
+    };
+    private string ScoreValue => State.Game switch
+    {
+        PracticeGameKind.FairwayFinder => State.ShotsTaken == 0 ? "—" : $"{FairwayFinderRules.Calculate(State.Attempts).HitPercentage:0}%",
+        PracticeGameKind.GolfCombine or PracticeGameKind.SkillsAssessment => State.ShotsTaken == 0 ? "—" : $"{Math.Round((double)State.TotalScore / State.ShotsTaken, MidpointRounding.AwayFromZero):0}/100",
+        _ => State.TotalScore.ToString()
+    };
+    private string RecommendationLabel => State.Game == PracticeGameKind.FairwayFinder && State.Settings.FairwayClubId is not null ? "Club" : "Recommended";
+    private string ApproachModeLabel => State.Settings.ApproachDistanceMode == ScoringDistanceMode.Total ? "total distance" : "carry distance";
+    private string SkillsModeLabel => State.Settings.SkillsDistanceMode == ScoringDistanceMode.Total ? "total distance" : "carry distance";
+    private string SkillsScoringDetail => State.CurrentTargetYards is { } target
+        ? $"{SkillsModeLabel} · {SkillsChallengeRules.TargetRingRadius(target, State.Settings.SkillsMarginMultiplier):0.0} yd scoring radius, automatically sized for this distance"
+        : "Preparing scoring area";
+    private string CombineProgress
+    {
+        get
+        {
+            var target = CombineRules.TargetIndex(State.ShotsTaken) + 1;
+            var shot = CombineRules.ShotInTarget(State.ShotsTaken);
+            var pass = CombineRules.PassNumber(State.ShotsTaken);
+            var passText = State.Settings.CombineFormat == CombineFormat.Full ? $" · Pass {pass} of 2" : "";
+            return $"Target {target} of {CombineRules.TargetCount} · Shot {shot} of 3{passText}";
+        }
+    }
+    private static string SwingLabel(string? swing) => swing switch
+    {
+        "Half" => "½ swing",
+        "ThreeQuarter" => "¾ swing",
+        _ => "Full swing"
+    };
+}

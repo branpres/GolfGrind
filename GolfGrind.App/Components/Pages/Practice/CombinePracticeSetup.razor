@@ -1,0 +1,25 @@
+<div class="combine-intro">
+    <strong>Golf Combine</strong>
+    <span>Structured skills test · carry-based scoring</span>
+    <p>12 distances from 55y to Driver. Score 0–100 per shot based on carry precision and lateral accuracy.</p>
+</div>
+<div class="combine-format-grid" role="group" aria-label="Combine format">
+    <button class="combine-format-choice @(Options.CombineFormat == CombineFormat.Quick ? "active" : "")" @onclick="() => Options.CombineFormat = CombineFormat.Quick">
+        <strong>Quick</strong><span>3 shots per distance<br />36 shots total</span>
+    </button>
+    <button class="combine-format-choice @(Options.CombineFormat == CombineFormat.Full ? "active" : "")" @onclick="() => Options.CombineFormat = CombineFormat.Full">
+        <strong>Full</strong><span>6 shots per distance<br />72 shots · 2 passes</span>
+    </button>
+</div>
+<div class="combine-driver-setting">
+    <RangeSetting Label="Driver target" Help="The carry benchmark used to score Driver shots in the Golf Combine." Value="@Options.CombineDriverTargetYards" ValueText="@($"{Options.CombineDriverTargetYards:0} yd")" Minimum="100" Maximum="350" ValueChanged="value => Options.CombineDriverTargetYards = value" />
+    <span>Full-distance credit begins 25 yards short of this target. Longer drives are not penalized.</span>
+</div>
+<div class="combine-info-card"><strong>Distances</strong><span>55 → 70 → 85 → 95 → 105 → 115 → 130 → 145 → 160 → 170 → 180 → Driver</span></div>
+<div class="combine-info-card"><strong>Scoring (carry only)</strong><span>Each shot is scored 0–100 based on how close your carry lands to the target, with a 1.25× lateral penalty. Driver uses a wider fairway target and a forgiving carry threshold.</span></div>
+<div class="combine-note">Club recommendations use Bag Mapping and Wedge Matrix values. Personal best: <strong>@PersonalBest</strong></div>
+
+@code {
+    [Parameter, EditorRequired] public PracticeGameOptions Options { get; set; } = new();
+    [Parameter, EditorRequired] public string PersonalBest { get; set; } = "";
+}

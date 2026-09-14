@@ -1,0 +1,81 @@
+@if (MonitorMode == "square" && DiagnosticsPath is not null)
+{
+    <section class="diagnostics-note">
+        Raw packet capture: <code>@DiagnosticsPath</code>
+    </section>
+}
+
+<div class="dashboard-grid">
+    <RangeGraphic LastShot="LastShot" ShowSummary="@false" />
+
+    <section class="card metrics-card">
+        <div class="section-heading"><h2>Last shot</h2></div>
+        @if (LastShot is null)
+        {
+            <div class="empty-state">Connect and hit a shot.</div>
+        }
+        else
+        {
+            <div class="metric-grid">
+                @Metric("Carry", LastShot.CarryYards, "yd", help: GolfTerms.Carry)
+                @Metric("Total", LastShot.TotalYards, "yd", help: GolfTerms.Total)
+                @Metric("Offline", LastShot.OfflineYards, "yd", signed: true, help: GolfTerms.Offline)
+                @Metric("Apex", LastShot.ApexYards, "yd", help: GolfTerms.Apex)
+                @Metric("Flight time", LastShot.FlightTimeSeconds, "sec", decimals: 2, help: GolfTerms.FlightTime)
+                @Metric("Ball speed", LastShot.BallSpeedMph, "mph", help: GolfTerms.BallSpeed)
+                @Metric("Launch", LastShot.LaunchAngleDeg, "°", help: GolfTerms.Launch)
+                @Metric("Launch dir", LastShot.LaunchDirectionDeg, "°", signed: true, help: GolfTerms.LaunchDirection)
+                @Metric("Total spin", LastShot.TotalSpinRpm, "rpm", decimals: 0, help: GolfTerms.TotalSpin)
+                @Metric("Spin axis", LastShot.SpinAxisDeg, "°", signed: true, help: GolfTerms.SpinAxis)
+                @Metric("Backspin", LastShot.BackSpinRpm, "rpm", decimals: 0, help: GolfTerms.Backspin)
+                @Metric("Sidespin", LastShot.SideSpinRpm, "rpm", decimals: 0, signed: true, help: GolfTerms.Sidespin)
+            </div>
+            <p class="muted estimate-note">Carry, total, offline, apex, flight time, and tracer are app estimates calculated from Square's measured ball data.</p>
+        }
+    </section>
+</div>
+
+<section class="card history-card">
+    <div class="section-heading">
+        <div>
+            <h2>Range session</h2>
+            <span class="muted">Started @Session.StartedAt.LocalDateTime.ToString("MMM d, h:mm tt")</span>
+        </div>
+        <span class="muted">@Session.Shots.Count shots · saved automatically</span>
+    </div>
+    <ShotHistoryTable Session="Session"
+                      IsPotentialOutlier="IsPotentialOutlier"
+                      IsDeletePending="IsDeletePending"
+                      ToggleExclusion="ToggleExclusion"
+                      DeleteShot="DeleteShot" />
+</section>
+
+@code {
+    [Parameter] public string MonitorMode { get; set; } = "square";
+    [Parameter] public string? DiagnosticsPath { get; set; }
+    [Parameter] public ShotData? LastShot { get; set; }
+    [Parameter, EditorRequired] public PracticeSession Session { get; set; } = new();
+    [Parameter] public Func<string, string?, double?, bool>? IsPotentialOutlier { get; set; }
+    [Parameter] public Func<Guid, DateTimeOffset, bool>? IsDeletePending { get; set; }
+    [Parameter] public EventCallback<ShotSelection> ToggleExclusion { get; set; }
+    [Parameter] public EventCallback<ShotSelection> DeleteShot { get; set; }
+
+    private static RenderFragment Metric(string label, double? value, string unit, int decimals = 1, bool signed = false, string? help = null) => builder =>
+    {
+        var text = value is null ? "—" : signed
+            ? value.Value.ToString(decimals == 0 ? "+0;-0;0" : "+0.0;-0.0;0.0", CultureInfo.InvariantCulture)
+            : value.Value.ToString(decimals == 0 ? "0" : decimals == 2 ? "0.00" : "0.0", CultureInfo.InvariantCulture);
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "metric");
+        builder.OpenElement(2, "span");
+        builder.AddAttribute(3, "class", "metric-label term-help");
+        builder.AddAttribute(4, "tabindex", "0");
+        builder.AddAttribute(5, "data-tooltip", help);
+        builder.AddAttribute(6, "aria-label", $"{label}: {help}");
+        builder.AddContent(7, label);
+        builder.CloseElement();
+        builder.OpenElement(8, "strong"); builder.AddAttribute(9, "class", "metric-value"); builder.AddContent(10, text); builder.CloseElement();
+        builder.OpenElement(11, "small"); builder.AddAttribute(12, "class", "metric-unit"); builder.AddContent(13, value is null ? "" : unit); builder.CloseElement();
+        builder.CloseElement();
+    };
+}

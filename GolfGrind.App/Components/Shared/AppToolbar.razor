@@ -1,0 +1,79 @@
+<section class="toolbar card">
+    <div class="status-area">
+        <span class="status-dot @(Status.IsConnected ? "online" : "")"></span>
+        <strong>@Status.Message</strong>
+        @if (Status.BatteryPercent is not null)
+        {
+            <span class="muted">Battery @Status.BatteryPercent%</span>
+        }
+        @if (Status.IsBallReady)
+        {
+            <span class="ready">Ball ready</span>
+        }
+    </div>
+    <div class="actions">
+        <select aria-label="Golfer profile" title="Active golfer" value="@SelectedProfileId" @onchange="ProfileChanged" disabled="@ProfileChangeDisabled">
+            @foreach (var profile in Profiles)
+            {
+                <option value="@profile.Id">@profile.Name</option>
+            }
+        </select>
+        <select aria-label="Launch monitor source" value="@MonitorMode" @onchange="MonitorChanged" disabled="@IsConnected">
+            <option value="square">Square Bluetooth</option>
+            <option value="mock">Demo mode</option>
+        </select>
+        @if (ActiveView != "Wedge Matrix")
+        {
+            <select aria-label="Club" value="@SelectedClubId" @onchange="ClubChanged" disabled="@BagGuideActive">
+                @foreach (var club in Clubs)
+                {
+                    <option value="@club.Id">@club.DisplayName</option>
+                }
+            </select>
+        }
+        <button @onclick="NewSession" disabled="@ProfileChangeDisabled">New session</button>
+        <button class="primary" @onclick="ToggleConnection">@(IsConnected ? "Disconnect" : "Connect")</button>
+        <label class="screen-awake-toggle" title="Prevent the display and screensaver from activating while the launch monitor is connected">
+            <input type="checkbox" checked="@KeepScreenAwake" @onchange="ScreenAwakeChanged" />
+            <span>Keep screen awake</span>
+        </label>
+        @if (MonitorMode == "mock")
+        {
+            <button @onclick="SimulateShot" disabled="@(!MockConnected)">Simulate shot</button>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public LaunchMonitorStatus Status { get; set; } = new(false, false, null, "Disconnected");
+    [Parameter, EditorRequired] public IReadOnlyList<GolferProfile> Profiles { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<GolfClub> Clubs { get; set; } = [];
+    [Parameter] public Guid SelectedProfileId { get; set; }
+    [Parameter] public Guid SelectedClubId { get; set; }
+    [Parameter] public string MonitorMode { get; set; } = "square";
+    [Parameter] public string ActiveView { get; set; } = "Range";
+    [Parameter] public bool ProfileChangeDisabled { get; set; }
+    [Parameter] public bool BagGuideActive { get; set; }
+    [Parameter] public bool IsConnected { get; set; }
+    [Parameter] public bool MockConnected { get; set; }
+    [Parameter] public bool KeepScreenAwake { get; set; }
+    [Parameter] public EventCallback<Guid> SelectedProfileIdChanged { get; set; }
+    [Parameter] public EventCallback<Guid> SelectedClubIdChanged { get; set; }
+    [Parameter] public EventCallback<string> MonitorModeChanged { get; set; }
+    [Parameter] public EventCallback<bool> KeepScreenAwakeChanged { get; set; }
+    [Parameter] public EventCallback NewSession { get; set; }
+    [Parameter] public EventCallback ToggleConnection { get; set; }
+    [Parameter] public EventCallback SimulateShot { get; set; }
+
+    private Task ProfileChanged(ChangeEventArgs args) =>
+        Guid.TryParse(args.Value?.ToString(), out var id) ? SelectedProfileIdChanged.InvokeAsync(id) : Task.CompletedTask;
+
+    private Task ClubChanged(ChangeEventArgs args) =>
+        Guid.TryParse(args.Value?.ToString(), out var id) ? SelectedClubIdChanged.InvokeAsync(id) : Task.CompletedTask;
+
+    private Task MonitorChanged(ChangeEventArgs args) =>
+        MonitorModeChanged.InvokeAsync(args.Value?.ToString() ?? "square");
+
+    private Task ScreenAwakeChanged(ChangeEventArgs args) =>
+        KeepScreenAwakeChanged.InvokeAsync(args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase));
+}

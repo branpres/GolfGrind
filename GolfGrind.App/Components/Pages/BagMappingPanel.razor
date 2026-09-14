@@ -1,0 +1,166 @@
+<ActivityWorkspace LastShot="LastShot">
+    <section class="card mapping-guide mode-control-card">
+        <div class="section-heading">
+            <div>
+                <h2>Guided bag mapping</h2>
+                <span class="muted">Choose clubs and let the app advance after the selected number of retained shots.</span>
+            </div>
+        </div>
+        <div class="selection-actions">
+            <button @onclick="SelectAll" disabled="@GuideActive">Select all</button>
+            <button @onclick="DeselectAll" disabled="@GuideActive">Deselect all</button>
+            <span class="muted">@SelectedClubIds.Count selected</span>
+        </div>
+        <div class="club-checklist">
+            @foreach (var club in Clubs.Where(club => club.Kind != GolfClubKind.Putter))
+            {
+                <label><input type="checkbox" checked="@SelectedClubIds.Contains(club.Id)" disabled="@GuideActive" @onchange="args => ToggleClub.InvokeAsync(new BagClubToggle(club.Id, args.Value is true))" /> @club.DisplayName</label>
+            }
+        </div>
+        <div class="practice-setup">
+            <label><span>Shots per club</span><input type="number" min="1" max="30" disabled="@GuideActive" value="@ShotsPerClub" @onchange="ChangeShotsPerClub" /></label>
+            @if (!GuideActive)
+            {
+                <button class="primary" @onclick="StartGuide">Start bag mapping</button>
+            }
+            else
+            {
+                <button class="danger" @onclick="StopGuide">Stop mapping</button>
+            }
+        </div>
+        @if (GuideActive)
+        {
+            <div class="practice-prompt mapping-prompt">
+                <span class="eyebrow">Current club</span>
+                <strong>@GuidePrompt</strong>
+                <span>@(ShotInClub + 1) of @ShotsPerClub accepted shots</span>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <div class="practice-result">@Message</div>
+        }
+    </section>
+</ActivityWorkspace>
+
+<section class="card analytics-card">
+    <div class="section-heading">
+        <div>
+            <h2>Bag mapping</h2>
+            <span class="muted">Dedicated Bag Mapping shots only; wedge rows use full swings.</span>
+        </div>
+        <button @onclick="ApplyCalculatedCarries">Use medians as stock carries</button>
+    </div>
+    <div class="table-wrap analytics-table">
+        <table>
+            <thead><tr>
+                <th>Club</th>
+                <th><TermHelp Text="Stock" Description="@GolfTerms.StockCarry" /></th>
+                <th><TermHelp Text="Gap" Description="@GolfTerms.Gap" /></th>
+                <th><TermHelp Text="Average" Description="@GolfTerms.Average" /></th>
+                <th><TermHelp Text="Median" Description="@GolfTerms.Median" /></th>
+                <th><TermHelp Text="Typical range" Description="@GolfTerms.TypicalRange" /></th>
+                <th><TermHelp Text="Consistency" Description="@GolfTerms.Consistency" /></th>
+                <th><TermHelp Text="Dispersion" Description="@GolfTerms.Dispersion" /></th>
+                <th><TermHelp Text="Ball speed" Description="@GolfTerms.BallSpeed" /></th>
+                <th><TermHelp Text="Launch" Description="@GolfTerms.Launch" /></th>
+                <th><TermHelp Text="Spin" Description="@GolfTerms.TotalSpin" /></th>
+                <th><TermHelp Text="Apex" Description="@GolfTerms.Apex" /></th>
+                <th><TermHelp Text="Confidence" Description="@GolfTerms.Confidence" /></th>
+            </tr></thead>
+            <tbody>
+            @foreach (var stat in Statistics)
+            {
+                <tr>
+                    <td>@stat.Club.DisplayName</td>
+                    <td>@Display(stat.StockCarryYards)</td>
+                    <td class="@GapClass(stat)">@GapToNext(stat)</td>
+                    <td>@Display(stat.AverageCarryYards)</td>
+                    <td>@Display(stat.MedianCarryYards)</td>
+                    <td>@TypicalRange(stat)</td>
+                    <td>@Display(stat.CarryStandardDeviation)</td>
+                    <td>@Dispersion(stat)</td>
+                    <td>@Display(stat.AverageBallSpeedMph)</td>
+                    <td>@Display(stat.AverageLaunchAngleDeg)</td>
+                    <td>@Display(stat.AverageSpinRpm, 0)</td>
+                    <td>@Display(stat.AverageApexYards)</td>
+                    <td>@Confidence(stat)</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <p class="muted estimate-note">Typical range is the middle 60% of retained carries. Consistency is carry standard deviation; lower is better. Enter a stock carry in the bag editor to override the calculated median.</p>
+    <div class="club-suggestion">
+        <label><span>Distance</span><input type="number" min="1" max="500" step="1" value="@SuggestedDistanceYards" @onchange="ChangeSuggestedDistance" /><small>yd</small></label>
+        <div><span class="muted">Suggested club</span><strong>@SuggestedClub</strong></div>
+    </div>
+    <div class="dispersion-panel">
+        <div class="section-heading">
+            <div><h2>Dispersion</h2><span class="muted">Carry relative to stock distance and offline spread.</span></div>
+            <select aria-label="Dispersion club" value="@AnalyticsClubId" @onchange="ChangeAnalyticsClub">
+                @foreach (var club in Clubs)
+                {
+                    <option value="@club.Id">@club.DisplayName</option>
+                }
+            </select>
+        </div>
+        @if (SelectedAnalyticsStockCarry is not null && DispersionShots.Count > 0)
+        {
+            <svg class="dispersion-chart" viewBox="0 0 520 400" role="img" aria-label="Club dispersion chart">
+                <rect x="0" y="0" width="520" height="400" rx="12" class="dispersion-bg" />
+                <line x1="260" y1="30" x2="260" y2="370" class="center-line" />
+                <line x1="45" y1="200" x2="475" y2="200" class="center-line" />
+                <circle cx="260" cy="200" r="45" class="dispersion-ring" />
+                <circle cx="260" cy="200" r="90" class="dispersion-ring" />
+                <circle cx="260" cy="200" r="135" class="dispersion-ring" />
+                @foreach (var shot in DispersionShots)
+                {
+                    <circle cx="@ChartX(shot.OfflineYards!.Value)" cy="@ChartY(shot.CarryYards!.Value, SelectedAnalyticsStockCarry.Value)" r="6" class="dispersion-shot" />
+                }
+            </svg>
+        }
+        else
+        {
+            <div class="empty-state">Record retained shots for this club to build its dispersion chart.</div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter] public ShotData? LastShot { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<GolfClub> Clubs { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlySet<Guid> SelectedClubIds { get; set; } = new HashSet<Guid>();
+    [Parameter, EditorRequired] public IReadOnlyList<ClubStatistics> Statistics { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<StoredShot> DispersionShots { get; set; } = [];
+    [Parameter] public bool GuideActive { get; set; }
+    [Parameter] public int ShotsPerClub { get; set; }
+    [Parameter] public int ShotInClub { get; set; }
+    [Parameter] public string GuidePrompt { get; set; } = "";
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public double SuggestedDistanceYards { get; set; }
+    [Parameter] public string SuggestedClub { get; set; } = "";
+    [Parameter] public Guid AnalyticsClubId { get; set; }
+    [Parameter] public double? SelectedAnalyticsStockCarry { get; set; }
+    [Parameter] public Func<ClubStatistics, string> GapToNext { get; set; } = _ => "—";
+    [Parameter] public Func<ClubStatistics, string> GapClass { get; set; } = _ => "";
+    [Parameter] public EventCallback SelectAll { get; set; }
+    [Parameter] public EventCallback DeselectAll { get; set; }
+    [Parameter] public EventCallback<BagClubToggle> ToggleClub { get; set; }
+    [Parameter] public EventCallback<int> ShotsPerClubChanged { get; set; }
+    [Parameter] public EventCallback<double> SuggestedDistanceYardsChanged { get; set; }
+    [Parameter] public EventCallback<Guid> AnalyticsClubIdChanged { get; set; }
+    [Parameter] public EventCallback StartGuide { get; set; }
+    [Parameter] public EventCallback StopGuide { get; set; }
+    [Parameter] public EventCallback ApplyCalculatedCarries { get; set; }
+    private Task ChangeShotsPerClub(ChangeEventArgs args) => int.TryParse(args.Value?.ToString(), out var value) ? ShotsPerClubChanged.InvokeAsync(value) : Task.CompletedTask;
+    private Task ChangeSuggestedDistance(ChangeEventArgs args) => double.TryParse(args.Value?.ToString(), out var value) ? SuggestedDistanceYardsChanged.InvokeAsync(value) : Task.CompletedTask;
+    private Task ChangeAnalyticsClub(ChangeEventArgs args) => Guid.TryParse(args.Value?.ToString(), out var value) ? AnalyticsClubIdChanged.InvokeAsync(value) : Task.CompletedTask;
+    private static double ChartX(double offline) => Math.Clamp(260 + offline * 6, 45, 475);
+    private static double ChartY(double carry, double stock) => Math.Clamp(200 - (carry - stock) * 6, 30, 370);
+    private static string Display(double? value, int decimals = 1) => value?.ToString(decimals == 0 ? "0" : "0." + new string('0', decimals), CultureInfo.InvariantCulture) ?? "—";
+    private static string Signed(double value) => value.ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture);
+    private static string TypicalRange(ClubStatistics stat) => stat.TypicalLowYards is null || stat.TypicalHighYards is null ? "—" : $"{stat.TypicalLowYards:0.0}–{stat.TypicalHighYards:0.0}";
+    private static string Dispersion(ClubStatistics stat) => stat.LeftEdgeYards is null || stat.RightEdgeYards is null ? "—" : $"{Signed(stat.LeftEdgeYards.Value)} to {Signed(stat.RightEdgeYards.Value)}";
+    private static string Confidence(ClubStatistics stat) => stat.ShotCount switch { 0 => "None", < 5 => "Low", < 10 => "Building", _ => "Good" };
+}

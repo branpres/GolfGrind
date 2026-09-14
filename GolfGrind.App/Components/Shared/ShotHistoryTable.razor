@@ -1,0 +1,83 @@
+<div class="table-wrap @CssClass">
+    <table>
+        <thead><tr>
+            <th>#</th><th>Game</th><th>Club</th>
+            <th><TermHelp Text="Swing" Description="@GolfTerms.Swing" /></th>
+            <th><TermHelp Text="Target" Description="@GolfTerms.Target" /></th>
+            <th><TermHelp Text="Result" Description="@GolfTerms.Result" /></th>
+            <th><TermHelp Text="Score" Description="@GolfTerms.Score" /></th>
+            <th><TermHelp Text="Carry" Description="@GolfTerms.Carry" /></th>
+            <th><TermHelp Text="Total" Description="@GolfTerms.Total" /></th>
+            <th><TermHelp Text="Offline" Description="@GolfTerms.Offline" /></th>
+            <th><TermHelp Text="Ball speed" Description="@GolfTerms.BallSpeed" /></th>
+            <th><TermHelp Text="Launch" Description="@GolfTerms.Launch" /></th>
+            <th><TermHelp Text="Spin" Description="@GolfTerms.Backspin" /></th>
+            <th></th>
+        </tr></thead>
+        <tbody>
+        @foreach (var item in Rows)
+        {
+            var shot = item.Shot;
+            var selection = new ShotSelection(Session.Id, shot.HitAt);
+            <tr class="@(shot.ExcludedFromAnalytics ? "excluded-row" : "")">
+                <td>@item.Number</td>
+                <td>@(shot.PracticeGame?.Game.DisplayName() ?? "—")</td>
+                <td>
+                    @shot.Club
+                    @if (IsPotentialOutlier?.Invoke(shot.Club, shot.SwingType, shot.CarryYards) == true)
+                    {
+                        <span class="review-flag">Review</span>
+                    }
+                </td>
+                <td>@SwingLabel(shot.SwingType)</td>
+                <td>@Display(shot.TargetYards)</td>
+                <td>@(shot.PracticeGame?.ResultLabel ?? "—")</td>
+                <td>@DisplayScore(shot.PracticeScore)</td>
+                <td>@Display(shot.CarryYards)</td>
+                <td>@Display(shot.TotalYards)</td>
+                <td>@DisplaySigned(shot.OfflineYards)</td>
+                <td>@shot.BallSpeedMph.ToString("0.0")</td>
+                <td>@shot.LaunchAngleDeg.ToString("0.0")°</td>
+                <td>@shot.BackSpinRpm.ToString("0")</td>
+                <td>
+                    <div class="shot-row-actions">
+                        <button class="exclude-shot @(shot.ExcludedFromAnalytics ? "excluded" : "")" @onclick="() => ToggleExclusion.InvokeAsync(selection)">@(shot.ExcludedFromAnalytics ? "Include" : "Exclude")</button>
+                        <button class="delete-shot @(IsDeletePending?.Invoke(Session.Id, shot.HitAt) == true ? "confirm" : "")" @onclick="() => DeleteShot.InvokeAsync(selection)">@(IsDeletePending?.Invoke(Session.Id, shot.HitAt) == true ? "Confirm" : "Delete")</button>
+                    </div>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PracticeSession Session { get; set; } = new();
+    [Parameter] public string CssClass { get; set; } = "";
+    [Parameter] public bool NewestFirst { get; set; } = true;
+    [Parameter] public Func<string, string?, double?, bool>? IsPotentialOutlier { get; set; }
+    [Parameter] public Func<Guid, DateTimeOffset, bool>? IsDeletePending { get; set; }
+    [Parameter] public EventCallback<ShotSelection> ToggleExclusion { get; set; }
+    [Parameter] public EventCallback<ShotSelection> DeleteShot { get; set; }
+
+    private IEnumerable<(StoredShot Shot, int Number)> Rows
+    {
+        get
+        {
+            var indexed = Session.Shots.Select((shot, index) => (Shot: shot, Number: index + 1));
+            return NewestFirst ? indexed.Reverse() : indexed;
+        }
+    }
+
+    private static string Display(double? value) => value is null ? "—" : $"{value:0.0}";
+    private static string DisplaySigned(double? value) => value is null ? "—" : $"{value:+0.0;-0.0;0.0}";
+    private static string DisplayScore(int? value) => value is null ? "—" : value.Value.ToString();
+    private static string SwingLabel(string? swingType) => ShotAnalytics.NormalizeSwing(swingType) switch
+    {
+        "Quarter" => "¼",
+        "Half" => "½",
+        "ThreeQuarter" => "¾",
+        "Full" => "Full",
+        _ => "—"
+    };
+}

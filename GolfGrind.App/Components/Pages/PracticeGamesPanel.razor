@@ -1,0 +1,65 @@
+@using GolfGrind.Core.Models
+
+<ActivityWorkspace LastShot="LastShot">
+    <section class="card practice-card mode-control-card">
+        <div class="section-heading">
+            <div>
+                <h2>Practice</h2>
+                <span class="muted">Seven focused modes share one results system. Every shot keeps the exact mode and settings used.</span>
+            </div>
+        </div>
+
+        <div class="practice-game-grid">
+            @foreach (var game in PracticeGameNames.SelectableGames)
+            {
+                <button class="practice-game-choice @(State.Game == game ? "active" : "")" disabled="@State.IsActive" @onclick="() => SelectGame.InvokeAsync(game)">
+                    <strong>@game.DisplayName()</strong>
+                    <span>@Description(game)</span>
+                </button>
+            }
+        </div>
+
+        @if (!State.IsActive)
+        {
+            <PracticeSetupPanel Game="State.Game" Options="Options" Clubs="Clubs" PersonalBest="PersonalBest" />
+            <button class="primary start-practice" @onclick="StartGame">Start @State.Game.DisplayName()</button>
+        }
+        else
+        {
+            <PracticeLivePanel State="State" EndGame="EndGame" />
+        }
+
+        @if (State.Game == PracticeGameKind.FairwayFinder)
+        {
+            <FairwayPattern State="State" />
+        }
+
+        @if (!string.IsNullOrWhiteSpace(State.Message))
+        {
+            <div class="practice-result">@State.Message</div>
+        }
+    </section>
+</ActivityWorkspace>
+
+@code {
+    [Parameter] public ShotData? LastShot { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<GolfClub> Clubs { get; set; } = [];
+    [Parameter, EditorRequired] public PracticeGameState State { get; set; } = new();
+    [Parameter, EditorRequired] public PracticeGameOptions Options { get; set; } = new();
+    [Parameter, EditorRequired] public Func<PracticeGameKind, string> PersonalBest { get; set; } = default!;
+    [Parameter] public EventCallback<PracticeGameKind> SelectGame { get; set; }
+    [Parameter] public EventCallback StartGame { get; set; }
+    [Parameter] public EventCallback EndGame { get; set; }
+
+    private static string Description(PracticeGameKind game) => game switch
+    {
+        PracticeGameKind.TargetPractice => "Repeat one distance and tighten proximity.",
+        PracticeGameKind.DistanceLadder => "Earn your way through increasing distances.",
+        PracticeGameKind.GolfCombine => "Structured 12-target test with 0–100 scoring.",
+        PracticeGameKind.ApproachPractice => "Count greens hit from a chosen distance and green size.",
+        PracticeGameKind.FairwayFinder => "Choose a club and track fairways, hit rate, and dispersion.",
+        PracticeGameKind.SkillsAssessment => "Configure randomized stations with 0–100 scoring.",
+        PracticeGameKind.PressureStreak => "Keep the streak alive before misses run out.",
+        _ => ""
+    };
+}

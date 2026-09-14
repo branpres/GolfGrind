@@ -1,0 +1,76 @@
+<section class="card bag-card">
+    <div class="section-heading">
+        <div>
+            <h2>My golf bag</h2>
+            <span class="muted">Club names, lofts, and optional stock carries are saved on this device.</span>
+        </div>
+        <button class="primary" @onclick="SaveBag">Save bag</button>
+    </div>
+
+    <div class="bag-list">
+        @foreach (var club in Clubs)
+        {
+            <div class="bag-row" @key="club.Id">
+                <input aria-label="Club name" placeholder="Club name" @bind="club.Name" />
+                <select aria-label="Club type" @bind="club.Kind">
+                    @foreach (var kind in Enum.GetValues<GolfClubKind>())
+                    {
+                        <option value="@kind">@kind</option>
+                    }
+                </select>
+                <label class="loft-field">
+                    <span>Loft</span>
+                    <input aria-label="Loft in degrees" type="number" min="1" max="90" step="0.5" placeholder="—" @bind="club.LoftDegrees" />
+                    <span>°</span>
+                </label>
+                <label class="stock-field">
+                    <span>Stock carry</span>
+                    <input aria-label="Stock carry in yards" type="number" min="1" max="500" step="0.5" placeholder="Auto" @bind="club.StockCarryYards" />
+                    <span>yd</span>
+                </label>
+                <button class="danger" @onclick="() => RemoveClub.InvokeAsync(club.Id)" disabled="@(Clubs.Count == 1)">Remove</button>
+            </div>
+        }
+    </div>
+
+    <div class="bag-add-row">
+        <input aria-label="New club name" placeholder="Club name" @bind="newClubName" />
+        <select aria-label="New club type" @bind="newClubKind">
+            @foreach (var kind in Enum.GetValues<GolfClubKind>())
+            {
+                <option value="@kind">@kind</option>
+            }
+        </select>
+        <label class="loft-field">
+            <span>Loft</span>
+            <input aria-label="New club loft in degrees" type="number" min="1" max="90" step="0.5" placeholder="—" @bind="newClubLoft" />
+            <span>°</span>
+        </label>
+        <label class="stock-field">
+            <span>Stock carry</span>
+            <input aria-label="New club stock carry in yards" type="number" min="1" max="500" step="0.5" placeholder="Auto" @bind="newClubStockCarry" />
+            <span>yd</span>
+        </label>
+        <button @onclick="AddClub">Add club</button>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Message))
+    {
+        <div class="bag-message">@Message</div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<GolfClub> Clubs { get; set; } = [];
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public EventCallback SaveBag { get; set; }
+    [Parameter] public EventCallback<Guid> RemoveClub { get; set; }
+    [Parameter] public EventCallback<NewGolfClubRequest> AddClubRequested { get; set; }
+
+    private string newClubName = "Wedge";
+    private GolfClubKind newClubKind = GolfClubKind.Wedge;
+    private double? newClubLoft = 56;
+    private double? newClubStockCarry;
+
+    private Task AddClub() => AddClubRequested.InvokeAsync(
+        new NewGolfClubRequest(newClubName, newClubKind, newClubLoft, newClubStockCarry));
+}

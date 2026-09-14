@@ -1,0 +1,173 @@
+<section class="card session-browser-card">
+    <div class="section-heading">
+        <div>
+            <h2>Saved sessions</h2>
+            <span class="muted">Showing sessions for @GolferName. Each shot is written to that golfer's local storage as soon as it is received.</span>
+        </div>
+        <span class="muted">@Sessions.Count sessions</span>
+    </div>
+    <div class="backup-actions">
+        <button @onclick="ExportBackup">Export complete JSON backup</button>
+        <button @onclick="ExportCsv">Export shots to CSV</button>
+        <button class="primary" @onclick="ImportBackup">Import JSON backup</button>
+    </div>
+    <div class="backup-coverage">
+        <strong>Complete JSON backup includes</strong>
+        <span>All golfer profiles, golf bags, club IDs, lofts, stock carries, sessions, retained shots, analytics exclusions, wedge swing tags, game settings, targets, scores, summaries, and calculation metadata.</span>
+        <small>Bag Mapping and Wedge Matrix results are rebuilt from those shots after restore. Temporary progress in an unfinished guided run is not included.</small>
+    </div>
+    @if (PendingBackup is not null)
+    {
+        <div class="import-confirmation">
+            <div>
+                <strong>Restore this backup?</strong>
+                <span>Exported @PendingBackup.ExportedAt.LocalDateTime.ToString("MMM d, yyyy · h:mm tt") · @(PendingBackup.Golfers?.Count ?? 0) golfers · @(PendingBackup.Golfers?.Sum(golfer => golfer.Sessions.Count) ?? 0) sessions</span>
+                <small>This replaces all golfer profiles, bags, and sessions currently stored on this installation.</small>
+            </div>
+            <button class="danger" @onclick="ConfirmImport">Confirm restore</button>
+            <button @onclick="CancelImport">Cancel</button>
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(BackupMessage))
+    {
+        <div class="practice-result">@BackupMessage</div>
+    }
+    <div class="session-list">
+        @foreach (var session in Sessions)
+        {
+            <div class="session-row @(session.Id == CurrentSessionId ? "current" : "")" @key="session.Id">
+                <div>
+                    @if (editingSessionId == session.Id)
+                    {
+                        <input class="session-name-input"
+                               maxlength="80"
+                               aria-label="Session name"
+                               value="@editingSessionName"
+                               @ref="sessionNameInput"
+                               @oninput="args => editingSessionName = args.Value?.ToString() ?? string.Empty"
+                               @onblur="() => CommitRenameAsync(session)"
+                               @onkeydown="args => HandleRenameKeyDownAsync(args, session)" />
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="session-name-display"
+                                title="Rename session"
+                                aria-label="Rename @SessionTitle(session)"
+                                @onclick="() => BeginRename(session)">@SessionTitle(session)</button>
+                    }
+                    <span class="golfer-session-badge">@GolferName</span>
+                    @if (session.Id == CurrentSessionId)
+                    {
+                        <span class="current-session-badge">Current</span>
+                    }
+                    @if (session.PracticeGame is { } game)
+                    {
+                        <span class="current-session-badge">@game.DisplayName()</span>
+                    }
+                    <div class="muted session-clubs">@SessionDate(session) · @SessionType(session) · @SessionClubs(session)</div>
+                    @if (session.GameSummary is { } summary)
+                    {
+                        <div class="muted session-clubs">@summary.Message</div>
+                    }
+                </div>
+                <div class="session-stat"><strong>@session.Shots.Count</strong><span>shots</span></div>
+                <div class="session-stat"><strong>@AverageCarry(session)</strong><span>avg carry</span></div>
+                <div class="session-row-actions">
+                    <button @onclick="() => ToggleDetails.InvokeAsync(session.Id)">@(ExpandedSessionId == session.Id ? "Hide" : "View shots")</button>
+                    <button class="danger @(PendingDeleteSessionId == session.Id ? "confirm" : "")" @onclick="() => DeleteSession.InvokeAsync(session.Id)">
+                        @(PendingDeleteSessionId == session.Id ? "Confirm delete" : "Delete session")
+                    </button>
+                </div>
+                @if (PendingDeleteSessionId == session.Id)
+                {
+                    <div class="session-delete-warning">This permanently deletes @session.Shots.Count shots. @DeleteImpact(session)</div>
+                }
+                @if (ExpandedSessionId == session.Id)
+                {
+                    <div class="session-details">
+                        <ShotHistoryTable Session="session"
+                                          CssClass="session-table-scroll"
+                                          IsPotentialOutlier="IsPotentialOutlier"
+                                          IsDeletePending="IsDeletePending"
+                                          ToggleExclusion="ToggleExclusion"
+                                          DeleteShot="DeleteShot" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(ToastMessage))
+{
+    <div class="session-toast" role="status" aria-live="polite">@ToastMessage</div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string GolferName { get; set; } = "Golfer";
+    [Parameter, EditorRequired] public IReadOnlyList<PracticeSession> Sessions { get; set; } = [];
+    [Parameter] public Guid CurrentSessionId { get; set; }
+    [Parameter] public Guid? ExpandedSessionId { get; set; }
+    [Parameter] public Guid? PendingDeleteSessionId { get; set; }
+    [Parameter] public GolfGrindBackup? PendingBackup { get; set; }
+    [Parameter] public string? BackupMessage { get; set; }
+    [Parameter] public string? ToastMessage { get; set; }
+    [Parameter, EditorRequired] public Func<PracticeSession, string> SessionTitle { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<PracticeSession, string> SessionType { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<PracticeSession, string> SessionDate { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<PracticeSession, string> SessionClubs { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<PracticeSession, string> AverageCarry { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<PracticeSession, string> DeleteImpact { get; set; } = default!;
+    [Parameter] public Func<string, string?, double?, bool>? IsPotentialOutlier { get; set; }
+    [Parameter] public Func<Guid, DateTimeOffset, bool>? IsDeletePending { get; set; }
+    [Parameter] public EventCallback ExportBackup { get; set; }
+    [Parameter] public EventCallback ExportCsv { get; set; }
+    [Parameter] public EventCallback ImportBackup { get; set; }
+    [Parameter] public EventCallback ConfirmImport { get; set; }
+    [Parameter] public EventCallback CancelImport { get; set; }
+    [Parameter] public EventCallback<Guid> ToggleDetails { get; set; }
+    [Parameter] public EventCallback<Guid> DeleteSession { get; set; }
+    [Parameter] public EventCallback<PracticeSession> RenameSession { get; set; }
+    [Parameter] public EventCallback<ShotSelection> ToggleExclusion { get; set; }
+    [Parameter] public EventCallback<ShotSelection> DeleteShot { get; set; }
+
+    private Guid? editingSessionId;
+    private string editingSessionName = string.Empty;
+    private ElementReference sessionNameInput;
+    private bool focusSessionNameInput;
+
+    private void BeginRename(PracticeSession session)
+    {
+        editingSessionId = session.Id;
+        editingSessionName = SessionTitle(session);
+        focusSessionNameInput = true;
+    }
+
+    private async Task CommitRenameAsync(PracticeSession session)
+    {
+        if (editingSessionId != session.Id)
+            return;
+        session.Name = string.IsNullOrWhiteSpace(editingSessionName)
+            ? "Untitled session"
+            : editingSessionName.Trim();
+        editingSessionId = null;
+        await RenameSession.InvokeAsync(session);
+    }
+
+    private async Task HandleRenameKeyDownAsync(KeyboardEventArgs args, PracticeSession session)
+    {
+        if (args.Key == "Enter")
+            await CommitRenameAsync(session);
+        else if (args.Key == "Escape")
+            editingSessionId = null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!focusSessionNameInput)
+            return;
+        focusSessionNameInput = false;
+        await sessionNameInput.FocusAsync();
+    }
+}

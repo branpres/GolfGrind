@@ -1,0 +1,277 @@
+<section class="card analytics-dashboard">
+    <div class="section-heading">
+        <div>
+            <h2>@GolferName · Analytics</h2>
+            <span class="muted">Range and practice performance only. Bag Mapping and Wedge Matrix calibration shots stay separate.</span>
+        </div>
+        <span class="confidence-badge @ConfidenceClass term-help" tabindex="0" data-tooltip="@GolfTerms.Confidence" aria-label="@($"{Confidence} confidence: {GolfTerms.Confidence}")">@Confidence confidence</span>
+    </div>
+
+    <div class="analytics-filters">
+        <label>
+            <span>Club</span>
+            <select aria-label="Analytics club" @bind="selectedClubId" @bind:after="AnalyticsClubChanged">
+                @foreach (var club in Clubs.Where(club => club.Kind != GolfClubKind.Putter))
+                {
+                    <option value="@club.Id">@club.DisplayName</option>
+                }
+            </select>
+        </label>
+        <label>
+            <span>Date range</span>
+            <select aria-label="Analytics date range" @bind="dateRangeDays" @bind:after="RebuildDashboard">
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="0">All time</option>
+            </select>
+        </label>
+        @if (SelectedClub?.Kind == GolfClubKind.Wedge)
+        {
+            <label>
+                <span>Swing</span>
+                <select aria-label="Analytics wedge swing" @bind="swingFilter" @bind:after="RebuildDashboard">
+                    <option value="All">All swings</option>
+                    <option value="Half">½ swing</option>
+                    <option value="ThreeQuarter">¾ swing</option>
+                    <option value="Full">Full swing</option>
+                </select>
+            </label>
+        }
+    </div>
+
+    @if (SelectedClub is null || IncludedShots.Count == 0)
+    {
+        <div class="empty-state">No included shots match these filters yet.</div>
+    }
+    else
+    {
+        <div class="analytics-summary-grid">
+            @Summary("Included shots", IncludedShots.Count.ToString(CultureInfo.InvariantCulture), "", "Shots used after the selected filters and exclusions are applied.")
+            @Summary("Median carry", Display(Statistics.MedianCarryYards), "yd", GolfTerms.Median)
+            @Summary("Average total", Display(AverageTotalYards), "yd", GolfTerms.Total)
+            @Summary("Average rollout", Display(AverageRolloutYards), "yd", GolfTerms.Rollout)
+            @Summary("Typical carry", TypicalRange, "yd", GolfTerms.TypicalRange)
+            @Summary("Consistency", Display(Statistics.CarryStandardDeviation), "yd σ", GolfTerms.Consistency)
+            @Summary("Dispersion width", Display(DispersionWidth), "yd", GolfTerms.Dispersion)
+            @Summary("Offline tendency", OfflineTendency, "", GolfTerms.OfflineTendency)
+            @Summary("Ball speed", Display(Statistics.AverageBallSpeedMph), "mph", GolfTerms.BallSpeed)
+            @Summary("Launch", Display(Statistics.AverageLaunchAngleDeg), "°", GolfTerms.Launch)
+            @Summary("Spin", Display(Statistics.AverageSpinRpm), "rpm", GolfTerms.TotalSpin)
+            @Summary("Apex", Display(Statistics.AverageApexYards), "yd", GolfTerms.Apex)
+        </div>
+
+        <div class="analytics-insight @TrendClass">
+            <strong>@TrendHeadline</strong>
+            <span>@TrendDetail</span>
+        </div>
+
+        <div class="analytics-chart-grid">
+            <section class="analytics-chart-panel">
+                <div class="section-heading">
+                    <div><h2>Carry by session</h2><span class="muted">Median carry for each matching session</span></div>
+                </div>
+                @if (TrendPoints.Count < 2)
+                {
+                    <div class="analytics-chart-empty">At least two matching sessions are needed for a trend.</div>
+                }
+                else
+                {
+                    <svg class="analytics-chart" viewBox="0 0 700 260" role="img" aria-label="Median carry trend by session">
+                        <rect x="0" y="0" width="700" height="260" rx="12" class="analytics-chart-bg" />
+                        <line x1="45" y1="225" x2="670" y2="225" class="analytics-axis" />
+                        <line x1="45" y1="25" x2="45" y2="225" class="analytics-axis" />
+                        <polyline points="@TrendPolyline" class="analytics-trend-line" />
+                        @foreach (var point in TrendPoints)
+                        {
+                            <circle cx="@Svg(TrendX(point.Index))" cy="@Svg(TrendY(point.MedianCarry))" r="5" class="analytics-trend-point">
+                                <title>@point.SessionName · @point.StartedAt.LocalDateTime.ToString("MMM d") · @point.MedianCarry.ToString("0.0") yd</title>
+                            </circle>
+                        }
+                        <text x="52" y="42" class="analytics-chart-label">@TrendMaximum.ToString("0") yd</text>
+                        <text x="52" y="217" class="analytics-chart-label">@TrendMinimum.ToString("0") yd</text>
+                    </svg>
+                }
+            </section>
+
+            <section class="analytics-chart-panel">
+                <div class="section-heading">
+                    <div><h2>Dispersion</h2><span class="muted">Carry and offline position for up to 100 recent shots</span></div>
+                </div>
+                @if (DispersionShots.Count == 0)
+                {
+                    <div class="analytics-chart-empty">Carry and offline values are needed for dispersion.</div>
+                }
+                else
+                {
+                    <svg class="analytics-chart" viewBox="0 0 700 260" role="img" aria-label="Carry and offline dispersion">
+                        <rect x="0" y="0" width="700" height="260" rx="12" class="analytics-chart-bg range" />
+                        <line x1="350" y1="20" x2="350" y2="235" class="analytics-center-line" />
+                        <line x1="35" y1="@Svg(DispersionY(Statistics.MedianCarryYards ?? 0))" x2="665" y2="@Svg(DispersionY(Statistics.MedianCarryYards ?? 0))" class="analytics-median-line" />
+                        @foreach (var shot in DispersionShots)
+                        {
+                            <circle cx="@Svg(DispersionX(shot.OfflineYards!.Value))" cy="@Svg(DispersionY(shot.CarryYards!.Value))" r="4.5" class="analytics-dispersion-point">
+                                <title>@shot.HitAt.LocalDateTime.ToString("MMM d") · @shot.CarryYards!.Value.ToString("0.0") yd · @Signed(shot.OfflineYards!.Value) yd offline</title>
+                            </circle>
+                        }
+                        <text x="42" y="40" class="analytics-chart-label">Left</text>
+                        <text x="658" y="40" text-anchor="end" class="analytics-chart-label">Right</text>
+                    </svg>
+                }
+            </section>
+        </div>
+
+        <section class="analytics-session-comparison">
+            <div class="section-heading">
+                <div><h2>Session comparison</h2><span class="muted">Most recent matching activity sessions</span></div>
+            </div>
+            <div class="table-wrap analytics-comparison-scroll">
+                <table>
+                    <thead><tr>
+                        <th>Session</th><th>Date</th><th>Shots</th>
+                        <th><TermHelp Text="Median carry" Description="@GolfTerms.Median" /></th>
+                        <th><TermHelp Text="Consistency" Description="@GolfTerms.Consistency" /></th>
+                        <th><TermHelp Text="Dispersion" Description="@GolfTerms.Dispersion" /></th>
+                        <th><TermHelp Text="Ball speed" Description="@GolfTerms.BallSpeed" /></th>
+                    </tr></thead>
+                    <tbody>
+                    @foreach (var row in SessionRows)
+                    {
+                        <tr>
+                            <td>@row.Name</td><td>@row.StartedAt.LocalDateTime.ToString("MMM d, yyyy")</td><td>@row.ShotCount</td>
+                            <td>@Display(row.MedianCarry) yd</td><td>@Display(row.StandardDeviation) yd</td><td>@Display(row.DispersionWidth) yd</td><td>@Display(row.AverageBallSpeed) mph</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+
+    @if (ExcludedCount > 0)
+    {
+        <div class="analytics-excluded-note">@ExcludedCount matching @(ExcludedCount == 1 ? "shot is" : "shots are") currently excluded from calculations. Use Sessions to include them again.</div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<GolfClub> Clubs { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<PracticeSession> Sessions { get; set; } = [];
+    [Parameter, EditorRequired] public string GolferName { get; set; } = "Golfer";
+
+    private Guid selectedClubId;
+    private int dateRangeDays = 90;
+    private string swingFilter = "All";
+    private AnalyticsDashboardSnapshot? dashboard;
+
+    private DateTimeOffset? EarliestDate => dateRangeDays == 0 ? null : DateTimeOffset.Now.AddDays(-dateRangeDays);
+    private AnalyticsDashboardSnapshot Dashboard => dashboard ??= AnalyticsDashboardBuilder.Build(Clubs, Sessions, selectedClubId, EarliestDate, swingFilter);
+    private GolfClub? SelectedClub => Dashboard.Club;
+    private IReadOnlyList<StoredShot> IncludedShots => Dashboard.IncludedShots;
+    private int ExcludedCount => Dashboard.ExcludedCount;
+    private ClubStatistics Statistics => Dashboard.Statistics;
+    private string Confidence => Dashboard.Confidence;
+    private string ConfidenceClass => Confidence.ToLowerInvariant();
+    private string TypicalRange => Statistics.TypicalLowYards is null || Statistics.TypicalHighYards is null
+        ? "—"
+        : $"{Statistics.TypicalLowYards:0.0}–{Statistics.TypicalHighYards:0.0}";
+    private double? DispersionWidth => Statistics.LeftEdgeYards is null || Statistics.RightEdgeYards is null
+        ? null
+        : Statistics.RightEdgeYards - Statistics.LeftEdgeYards;
+    private PerformanceDistanceMetrics DistanceMetrics => Dashboard.DistanceMetrics;
+    private double? AverageTotalYards => DistanceMetrics.AverageTotalYards;
+    private double? AverageRolloutYards => DistanceMetrics.AverageRolloutYards;
+    private string OfflineTendency => Direction(DistanceMetrics.AverageOfflineYards);
+    private IReadOnlyList<StoredShot> DispersionShots => Dashboard.DispersionShots;
+    private IReadOnlyList<AnalyticsTrendPoint> TrendPoints => Dashboard.TrendPoints;
+    private double TrendMinimum => TrendPoints.Count == 0 ? 0 : TrendPoints.Min(point => point.MedianCarry) - 5;
+    private double TrendMaximum => TrendPoints.Count == 0 ? 1 : TrendPoints.Max(point => point.MedianCarry) + 5;
+    private string TrendPolyline => string.Join(" ", TrendPoints.Select(point => $"{Svg(TrendX(point.Index))},{Svg(TrendY(point.MedianCarry))}"));
+
+    private IReadOnlyList<AnalyticsSessionRow> SessionRows => Dashboard.SessionRows;
+
+    private string TrendHeadline
+    {
+        get
+        {
+            var comparison = Dashboard.RecentComparison;
+            if (comparison is null) return "More shots needed for a trend";
+            if (Math.Abs(comparison.CarryChange) < 1 && Math.Abs(comparison.ConsistencyChange) < 1)
+                return "Performance is holding steady";
+            if (comparison.ConsistencyChange <= -1) return "Consistency is improving";
+            if (comparison.ConsistencyChange >= 1) return "Carry is becoming less consistent";
+            return comparison.CarryChange > 0 ? "Recent carry is trending longer" : "Recent carry is trending shorter";
+        }
+    }
+    private string TrendDetail
+    {
+        get
+        {
+            var comparison = Dashboard.RecentComparison;
+            return comparison is null
+                ? "Record at least six matching shots to compare recent performance with the preceding shots."
+                : $"Recent median carry {Signed(comparison.CarryChange)} yd; carry variation {Signed(comparison.ConsistencyChange)} yd versus the preceding sample.";
+        }
+    }
+    private string TrendClass
+    {
+        get
+        {
+            var comparison = Dashboard.RecentComparison;
+            return comparison is null ? "neutral" : comparison.ConsistencyChange <= -1 ? "positive" : comparison.ConsistencyChange >= 1 ? "warning" : "neutral";
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Clubs.All(club => club.Id != selectedClubId))
+            selectedClubId = Clubs.FirstOrDefault(club => club.Kind != GolfClubKind.Putter)?.Id ?? Guid.Empty;
+        if (Clubs.FirstOrDefault(club => club.Id == selectedClubId)?.Kind != GolfClubKind.Wedge)
+            swingFilter = "All";
+        RebuildDashboard();
+    }
+
+    private void AnalyticsClubChanged()
+    {
+        if (Clubs.FirstOrDefault(club => club.Id == selectedClubId)?.Kind != GolfClubKind.Wedge)
+            swingFilter = "All";
+        RebuildDashboard();
+    }
+
+    private void RebuildDashboard() => dashboard = AnalyticsDashboardBuilder.Build(Clubs, Sessions, selectedClubId, EarliestDate, swingFilter);
+
+    private double TrendX(int index) => TrendPoints.Count <= 1 ? 350 : 45 + index * 625d / (TrendPoints.Count - 1);
+    private double TrendY(double carry) => 225 - (carry - TrendMinimum) * 200 / Math.Max(1, TrendMaximum - TrendMinimum);
+    private double DispersionX(double offline) =>
+        350 + offline * 300 / Math.Max(10, DispersionShots.Max(shot => Math.Abs(shot.OfflineYards!.Value)));
+    private double DispersionY(double carry)
+    {
+        var minimum = DispersionShots.Min(shot => shot.CarryYards!.Value) - 5;
+        var maximum = DispersionShots.Max(shot => shot.CarryYards!.Value) + 5;
+        return 235 - (carry - minimum) * 215 / Math.Max(1, maximum - minimum);
+    }
+
+    private static string Direction(double? offlineYards)
+    {
+        if (offlineYards is null) return "—";
+        if (Math.Abs(offlineYards.Value) < 0.05) return "Centered";
+        return $"{Math.Abs(offlineYards.Value):0.0} yd {(offlineYards.Value < 0 ? "left" : "right")}";
+    }
+    private static string Display(double? value) => value?.ToString("0.0", CultureInfo.InvariantCulture) ?? "—";
+    private static string Signed(double value) => value.ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture);
+    private static string Svg(double value) => value.ToString("0.0", CultureInfo.InvariantCulture);
+    private static RenderFragment Summary(string label, string value, string unit, string description) => builder =>
+    {
+        builder.OpenElement(0, "div"); builder.AddAttribute(1, "class", "analytics-summary");
+        builder.OpenElement(2, "span");
+        builder.AddAttribute(3, "class", "term-help");
+        builder.AddAttribute(4, "tabindex", "0");
+        builder.AddAttribute(5, "data-tooltip", description);
+        builder.AddAttribute(6, "aria-label", $"{label}: {description}");
+        builder.AddContent(7, label);
+        builder.CloseElement();
+        builder.OpenElement(8, "strong"); builder.AddContent(9, value);
+        if (!string.IsNullOrEmpty(unit)) { builder.OpenElement(10, "small"); builder.AddContent(11, unit); builder.CloseElement(); }
+        builder.CloseElement(); builder.CloseElement();
+    };
+
+}

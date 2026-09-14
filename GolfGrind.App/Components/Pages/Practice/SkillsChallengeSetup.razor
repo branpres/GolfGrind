@@ -1,0 +1,20 @@
+<div class="combine-intro"><strong>Skills Challenge</strong><span>Configure your challenge stations</span></div>
+<div class="skills-challenge-settings">
+    <RangeSetting Label="Number of stations" Value="@Options.SkillsStationCount" ValueText="@Options.SkillsStationCount.ToString()" Minimum="5" Maximum="20" ValueChanged="value => Options.SkillsStationCount = (int)value" />
+    <RangeSetting Label="Minimum distance" Value="@Options.SkillsMinimumDistanceYards" ValueText="@($"{Options.SkillsMinimumDistanceYards:0} yd")" Minimum="20" Maximum="280" ValueChanged="value => Options.SkillsMinimumDistanceYards = value" />
+    <RangeSetting Label="Maximum distance" Value="@Options.SkillsMaximumDistanceYards" ValueText="@($"{Options.SkillsMaximumDistanceYards:0} yd")" Minimum="50" Maximum="350" ValueChanged="value => Options.SkillsMaximumDistanceYards = value" />
+    <RangeSetting Label="Margin of miss" Help="Longer targets automatically get larger scoring circles. This setting scales every circle: 1.0× is the default, lower values are stricter, and higher values are more forgiving." Value="@Options.SkillsMarginMultiplier" ValueText="@($"{Options.SkillsMarginMultiplier:0.0}×")" Minimum="0.5" Maximum="2" Step="0.1" ValueChanged="value => Options.SkillsMarginMultiplier = value" />
+    <div class="skills-distance-setting">
+        <strong>Scoring distance</strong>
+        <div class="approach-mode-grid" role="group" aria-label="Skills Challenge scoring distance">
+            <button class="approach-mode-choice @(Options.SkillsDistanceMode == ScoringDistanceMode.Carry ? "active" : "")" @onclick="() => Options.SkillsDistanceMode = ScoringDistanceMode.Carry"><strong>Carry</strong><span>Use where the ball lands</span></button>
+            <button class="approach-mode-choice @(Options.SkillsDistanceMode == ScoringDistanceMode.Total ? "active" : "")" @onclick="() => Options.SkillsDistanceMode = ScoringDistanceMode.Total"><strong>Total</strong><span>Include rollout distance</span></button>
+        </div>
+    </div>
+    <div class="combine-info-card skills-scoring-info"><strong>How scoring works</strong><span>Each station shows its scoring radius—the outer edge of the scoring circle. Shots score 100 near the center, then 75, 50, or 25 through the outer bands. A shot outside the circle scores 0.</span></div>
+</div>
+<div class="combine-note">Each station gets a random distance in your range and a 0–100 score. Bag Mapping and Wedge Matrix are used only for club and swing recommendations.</div>
+
+@code {
+    [Parameter, EditorRequired] public PracticeGameOptions Options { get; set; } = new();
+}

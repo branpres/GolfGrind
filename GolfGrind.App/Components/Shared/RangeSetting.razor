@@ -1,0 +1,39 @@
+@using System.Globalization
+
+<label class="practice-slider">
+    <span>
+        @if (string.IsNullOrWhiteSpace(Help))
+        {
+            <text>@Label</text>
+        }
+        else
+        {
+            <TermHelp Text="@Label" Description="@Help" />
+        }
+        <strong>@ValueText</strong>
+    </span>
+    <input type="range"
+           min="@Minimum.ToString(CultureInfo.InvariantCulture)"
+           max="@Maximum.ToString(CultureInfo.InvariantCulture)"
+           step="@Step.ToString(CultureInfo.InvariantCulture)"
+           value="@Value.ToString(CultureInfo.InvariantCulture)"
+           @oninput="HandleInput" />
+</label>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter] public string? Help { get; set; }
+    [Parameter, EditorRequired] public double Value { get; set; }
+    [Parameter, EditorRequired] public string ValueText { get; set; } = "";
+    [Parameter] public double Minimum { get; set; }
+    [Parameter] public double Maximum { get; set; } = 100;
+    [Parameter] public double Step { get; set; } = 1;
+    [Parameter] public EventCallback<double> ValueChanged { get; set; }
+
+    private Task HandleInput(ChangeEventArgs args)
+    {
+        return double.TryParse(args.Value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+            ? ValueChanged.InvokeAsync(value)
+            : Task.CompletedTask;
+    }
+}

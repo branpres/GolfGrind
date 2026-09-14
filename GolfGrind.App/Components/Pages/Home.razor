@@ -1,0 +1,171 @@
+@page "/"
+@implements IDisposable
+@inject GolferProfileService ProfileService
+@inject GolfBagService BagService
+@inject SessionStorageService SessionStorage
+@inject ActivitySessionCoordinator ActivitySessions
+@inject BackupService BackupService
+@inject PracticeGameEngine PracticeGameEngine
+@inject LaunchMonitorWorkspace MonitorWorkspace
+
+<PageTitle>Golf Grind</PageTitle>
+
+<AppToolbar Status="status"
+            Profiles="profiles"
+            Clubs="clubs"
+            SelectedProfileId="selectedProfileId"
+            SelectedProfileIdChanged="SetProfileAsync"
+            SelectedClubId="selectedClubId"
+            SelectedClubIdChanged="SetClubAsync"
+            MonitorMode="@monitorMode"
+            MonitorModeChanged="SetMonitorModeAsync"
+            ActiveView="@activeView"
+            ProfileChangeDisabled="ProfileChangeDisabled"
+            BagGuideActive="bagGuide.IsActive"
+            IsConnected="ActiveMonitor.IsConnected"
+            MockConnected="MockMonitor.IsConnected"
+            KeepScreenAwake="keepScreenAwake"
+            KeepScreenAwakeChanged="SetKeepScreenAwake"
+            NewSession="StartNewSession"
+            ToggleConnection="ToggleConnectionAsync"
+            SimulateShot="SimulateShot" />
+
+<AppNavigation Views="AppViews" ActiveView="@activeView" ViewSelected="SelectViewAsync" />
+
+<section class="reliability-strip" aria-label="Launch monitor reliability status">
+    <span><strong>@status.ConnectionState</strong> · @status.Message</span>
+    <span>Accepted @acceptedShotCount · Rejected @rejectedShotCount · Duplicates @duplicateShotCount</span>
+    @if (!string.IsNullOrWhiteSpace(shotDiagnosticMessage))
+    {
+        <span>@shotDiagnosticMessage</span>
+    }
+</section>
+
+@if (activeView == "Golfers")
+{
+    <GolfersPanel Profiles="profiles"
+                  ActiveProfileId="selectedProfileId"
+                  PendingDeleteProfileId="pendingDeleteProfileId"
+                  ChangeDisabled="ProfileChangeDisabled"
+                  Message="@profileMessage"
+                  SaveNames="SaveProfileNames"
+                  UseProfile="UseProfileAsync"
+                  DeleteProfile="RequestDeleteProfileAsync"
+                  AddProfile="AddProfileFromPanelAsync" />
+}
+
+@if (activeView == "Golf Bag")
+{
+    <GolfBagPanel Clubs="clubs"
+                  Message="@bagMessage"
+                  SaveBag="SaveBagAsync"
+                  RemoveClub="RemoveClub"
+                  AddClubRequested="AddClubFromPanel" />
+}
+
+@if (activeView == "Bag Mapping")
+{
+    <BagMappingPanel LastShot="lastShot"
+                     Clubs="clubs"
+                     SelectedClubIds="bagGuide.SelectedClubIds"
+                     Statistics="BagStatistics"
+                     DispersionShots="DispersionShots"
+                     GuideActive="bagGuide.IsActive"
+                     ShotsPerClub="bagGuide.ShotsPerClub"
+                     ShotsPerClubChanged="SetBagGuideShotsPerClub"
+                     ShotInClub="bagGuide.ShotInClub"
+                     GuidePrompt="@BagGuidePrompt"
+                     Message="@BagGuideMessage"
+                     SuggestedDistanceYards="suggestedDistanceYards"
+                     SuggestedDistanceYardsChanged="SetSuggestedDistance"
+                     SuggestedClub="@SuggestedClub"
+                     AnalyticsClubId="analyticsClubId"
+                     AnalyticsClubIdChanged="SetAnalyticsClub"
+                     SelectedAnalyticsStockCarry="SelectedAnalyticsStockCarry"
+                     GapToNext="GapToNext"
+                     GapClass="GapClass"
+                     SelectAll="SelectAllBagGuideClubs"
+                     DeselectAll="DeselectAllBagGuideClubs"
+                     ToggleClub="ToggleBagGuideClub"
+                     StartGuide="StartBagGuideAsync"
+                     StopGuide="StopBagGuide"
+                     ApplyCalculatedCarries="ApplyCalculatedCarries" />
+}
+
+@if (activeView == "Wedge Matrix")
+{
+    <WedgeMatrixPanel LastShot="lastShot"
+                      Clubs="clubs"
+                      Sessions="SessionStorage.GetSessions()"
+                      SelectedClubId="selectedClubId"
+                      SelectedClubIdChanged="SetClubAsync"
+                      SelectedSwing="@selectedSwingType"
+                      SelectedSwingChanged="SetSwingType"
+                      GuideActive="wedgeGuide.IsActive"
+                      ShotsPerCell="wedgeGuide.ShotsPerCell"
+                      ShotsPerCellChanged="SetWedgeGuideShotsPerCell"
+                      ShotInCell="wedgeGuide.ShotInCell"
+                      GuidePrompt="@WedgeGuidePrompt"
+                      Message="@WedgeGuideMessage"
+                      StartGuide="StartWedgeGuideAsync"
+                      StopGuide="StopWedgeGuide" />
+}
+
+@if (activeView == "Practice")
+{
+    <PracticeGamesPanel LastShot="lastShot"
+                        Clubs="clubs"
+                        State="practiceGameState"
+                        Options="practiceGameOptions"
+                        PersonalBest="PracticePersonalBest"
+                        SelectGame="SelectPracticeGame"
+                        StartGame="StartPracticeGame"
+                        EndGame="EndPracticeGame" />
+}
+
+@if (activeView == "Analytics")
+{
+    <AnalyticsPanel Clubs="clubs" Sessions="SessionStorage.GetSessions()" GolferName="@ActiveProfileName" />
+}
+
+@if (activeView == "Sessions")
+{
+    <SessionsPanel GolferName="@ActiveProfileName"
+                   Sessions="SessionStorage.GetSessions()"
+                   CurrentSessionId="currentSession.Id"
+                   ExpandedSessionId="selectedHistorySessionId"
+                   PendingDeleteSessionId="pendingDeleteWholeSessionId"
+                   PendingBackup="pendingBackup"
+                   BackupMessage="@backupMessage"
+                   ToastMessage="@sessionToast"
+                   SessionTitle="SessionTitle"
+                   SessionType="SessionType"
+                   SessionDate="SessionDate"
+                   SessionClubs="SessionClubs"
+                   AverageCarry="AverageCarry"
+                   DeleteImpact="DeleteImpact"
+                   IsPotentialOutlier="IsPotentialOutlier"
+                   IsDeletePending="IsDeletePending"
+                   ExportBackup="ExportBackup"
+                   ExportCsv="ExportCsv"
+                   ImportBackup="ChooseBackupAsync"
+                   ConfirmImport="ConfirmBackupImport"
+                   CancelImport="CancelBackupImport"
+                   ToggleDetails="ToggleSessionDetails"
+                   DeleteSession="RequestDeleteSession"
+                   RenameSession="RenameSession"
+                   ToggleExclusion="HandleToggleExclusion"
+                   DeleteShot="HandleDeleteShot" />
+}
+
+@if (activeView == "Range")
+{
+    <RangePanel MonitorMode="@monitorMode"
+                DiagnosticsPath="@ActiveMonitor.DiagnosticsPath"
+                LastShot="lastShot"
+                Session="currentSession"
+                IsPotentialOutlier="IsPotentialOutlier"
+                IsDeletePending="IsDeletePending"
+                ToggleExclusion="HandleToggleExclusion"
+                DeleteShot="HandleDeleteShot" />
+}

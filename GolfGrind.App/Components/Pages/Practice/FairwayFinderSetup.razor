@@ -1,0 +1,22 @@
+<label class="fairway-club-setting">
+    <span>Club</span>
+    <select aria-label="Fairway Finder club" value="@Options.FairwayClubId" @onchange="ChangeClub">
+        <option value="">Automatic recommendation</option>
+        @foreach (var club in Clubs.Where(club => club.Kind != GolfClubKind.Putter))
+        {
+            <option value="@club.Id">@club.DisplayName</option>
+        }
+    </select>
+</label>
+<RangeSetting Label="Shots" Value="@Options.ShotGoal" ValueText="@Options.ShotGoal.ToString()" Minimum="1" Maximum="100" ValueChanged="value => Options.ShotGoal = (int)value" />
+<RangeSetting Label="Fairway width" Help="The total width of the practice fairway, centered on the target line." Value="@Options.FairwayWidthYards" ValueText="@($"{Options.FairwayWidthYards:0} yd")" Minimum="5" Maximum="100" ValueChanged="value => Options.FairwayWidthYards = value" />
+<RangeSetting Label="Minimum carry" Help="The shortest carry distance that can count as a fairway hit." Value="@Options.MinimumCarryYards" ValueText="@($"{Options.MinimumCarryYards:0} yd")" Minimum="0" Maximum="350" ValueChanged="value => Options.MinimumCarryYards = value" />
+<div class="combine-note">Choose any club, or let Bag Mapping recommend your driver or longest mapped wood or hybrid. Bag Mapping is not required.</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<GolfClub> Clubs { get; set; } = [];
+    [Parameter, EditorRequired] public PracticeGameOptions Options { get; set; } = new();
+
+    private void ChangeClub(ChangeEventArgs args) =>
+        Options.FairwayClubId = Guid.TryParse(args.Value?.ToString(), out var clubId) ? clubId : null;
+}

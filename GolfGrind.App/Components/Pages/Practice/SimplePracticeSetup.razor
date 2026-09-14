@@ -1,0 +1,25 @@
+@if (Game == PracticeGameKind.TargetPractice)
+{
+    <RangeSetting Label="Target" Value="@Options.FixedTargetYards" ValueText="@($"{Options.FixedTargetYards:0} yd")" Minimum="10" Maximum="350" ValueChanged="value => Options.FixedTargetYards = value" />
+    <RangeSetting Label="Shots" Value="@Options.ShotGoal" ValueText="@Options.ShotGoal.ToString()" Minimum="1" Maximum="100" ValueChanged="value => Options.ShotGoal = (int)value" />
+    <RangeSetting Label="Scoring radius" Help="@GolfTerms.ScoringRadius" Value="@Options.ToleranceYards" ValueText="@($"{Options.ToleranceYards:0} yd")" Minimum="1" Maximum="50" ValueChanged="value => Options.ToleranceYards = value" />
+}
+else if (Game == PracticeGameKind.DistanceLadder)
+{
+    <RangeSetting Label="Start" Value="@Options.LadderStartYards" ValueText="@($"{Options.LadderStartYards} yd")" Minimum="10" Maximum="350" ValueChanged="value => Options.LadderStartYards = (int)value" />
+    <RangeSetting Label="Finish" Value="@Options.LadderEndYards" ValueText="@($"{Options.LadderEndYards} yd")" Minimum="10" Maximum="350" ValueChanged="value => Options.LadderEndYards = (int)value" />
+    <RangeSetting Label="Step" Value="@Options.LadderStepYards" ValueText="@($"{Options.LadderStepYards} yd")" Minimum="1" Maximum="100" ValueChanged="value => Options.LadderStepYards = (int)value" />
+    <RangeSetting Label="Advance within" Help="The carry must finish within this many yards of the target before the ladder advances." Value="@Options.ToleranceYards" ValueText="@($"{Options.ToleranceYards:0} yd")" Minimum="1" Maximum="50" ValueChanged="value => Options.ToleranceYards = value" />
+}
+else
+{
+    <RangeSetting Label="Minimum" Value="@Options.MinimumTargetYards" ValueText="@($"{Options.MinimumTargetYards} yd")" Minimum="10" Maximum="350" ValueChanged="value => Options.MinimumTargetYards = (int)value" />
+    <RangeSetting Label="Maximum" Value="@Options.MaximumTargetYards" ValueText="@($"{Options.MaximumTargetYards} yd")" Minimum="10" Maximum="350" ValueChanged="value => Options.MaximumTargetYards = (int)value" />
+    <RangeSetting Label="Hit radius" Help="The maximum distance from the target that still counts as a successful shot." Value="@Options.ToleranceYards" ValueText="@($"{Options.ToleranceYards:0} yd")" Minimum="1" Maximum="50" ValueChanged="value => Options.ToleranceYards = value" />
+    <RangeSetting Label="Misses allowed" Value="@Options.MissesAllowed" ValueText="@Options.MissesAllowed.ToString()" Minimum="1" Maximum="10" ValueChanged="value => Options.MissesAllowed = (int)value" />
+}
+
+@code {
+    [Parameter, EditorRequired] public PracticeGameKind Game { get; set; }
+    [Parameter, EditorRequired] public PracticeGameOptions Options { get; set; } = new();
+}

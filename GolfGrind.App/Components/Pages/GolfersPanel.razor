@@ -1,0 +1,58 @@
+<section class="card golfer-card">
+    <div class="section-heading">
+        <div>
+            <h2>Golfer profiles</h2>
+            <span class="muted">Each golfer has a separate bag, sessions, wedge matrix, and analytics.</span>
+        </div>
+        <button class="primary" @onclick="SaveNames">Save names</button>
+    </div>
+    <div class="golfer-list">
+        @foreach (var profile in Profiles)
+        {
+            <div class="golfer-row" @key="profile.Id">
+                <input aria-label="Golfer name" maxlength="60" @bind="profile.Name" />
+                @if (profile.Id == ActiveProfileId)
+                {
+                    <span class="current-session-badge">Active</span>
+                }
+                else
+                {
+                    <button disabled="@ChangeDisabled" @onclick="() => UseProfile.InvokeAsync(profile.Id)">Use profile</button>
+                }
+                <button class="danger @(PendingDeleteProfileId == profile.Id ? "confirm" : "")"
+                        disabled="@(Profiles.Count == 1 || ChangeDisabled)"
+                        @onclick="() => DeleteProfile.InvokeAsync(profile.Id)">
+                    @(PendingDeleteProfileId == profile.Id ? "Confirm delete" : "Delete")
+                </button>
+            </div>
+        }
+    </div>
+    <div class="golfer-add-row">
+        <input aria-label="New golfer name" maxlength="60" placeholder="Golfer name" @bind="newProfileName" />
+        <button disabled="@ChangeDisabled" @onclick="AddGolfer">Add golfer</button>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Message))
+    {
+        <div class="bag-message">@Message</div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<GolferProfile> Profiles { get; set; } = [];
+    [Parameter] public Guid ActiveProfileId { get; set; }
+    [Parameter] public Guid? PendingDeleteProfileId { get; set; }
+    [Parameter] public bool ChangeDisabled { get; set; }
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public EventCallback SaveNames { get; set; }
+    [Parameter] public EventCallback<Guid> UseProfile { get; set; }
+    [Parameter] public EventCallback<Guid> DeleteProfile { get; set; }
+    [Parameter] public EventCallback<string> AddProfile { get; set; }
+
+    private string newProfileName = "";
+
+    private async Task AddGolfer()
+    {
+        await AddProfile.InvokeAsync(newProfileName);
+        newProfileName = "";
+    }
+}

@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="GolfGrind.Core/GolfGrind.Core.csproj" />
+  <Project Path="GolfGrind.App/GolfGrind.App.csproj" />
+  <Project Path="GolfGrind.ProtocolChecks/GolfGrind.ProtocolChecks.csproj" />
+  <Project Path="GolfGrind.CoreChecks/GolfGrind.CoreChecks.csproj" />
+</Solution>

@@ -1,0 +1,34 @@
+<div class="practice-setup game-settings">
+    @if (Game is PracticeGameKind.TargetPractice or PracticeGameKind.DistanceLadder or PracticeGameKind.PressureStreak)
+    {
+        <SimplePracticeSetup Game="Game" Options="Options" />
+    }
+    else if (Game == PracticeGameKind.GolfCombine)
+    {
+        <CombinePracticeSetup Options="Options" PersonalBest="@PersonalBest(Game)" />
+    }
+    else if (Game == PracticeGameKind.ApproachPractice)
+    {
+        <ApproachPracticeSetup Options="Options" />
+    }
+    else if (Game == PracticeGameKind.FairwayFinder)
+    {
+        <FairwayFinderSetup Clubs="Clubs" Options="Options" />
+    }
+    else if (Game == PracticeGameKind.SkillsAssessment)
+    {
+        <SkillsChallengeSetup Options="Options" />
+    }
+
+    @if (Game != PracticeGameKind.GolfCombine)
+    {
+        <div class="combine-note">Personal best: <strong>@PersonalBest(Game)</strong></div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PracticeGameKind Game { get; set; }
+    [Parameter, EditorRequired] public PracticeGameOptions Options { get; set; } = new();
+    [Parameter, EditorRequired] public IReadOnlyList<GolfClub> Clubs { get; set; } = [];
+    [Parameter, EditorRequired] public Func<PracticeGameKind, string> PersonalBest { get; set; } = default!;
+}
