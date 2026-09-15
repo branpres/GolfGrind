@@ -45,6 +45,25 @@ Check(calculatedShot.ApexYards is > 20 and < 40, "plausible apex");
 Check(calculatedShot.FlightTimeSeconds is > 4 and < 7, "plausible flight time");
 Check(calculatedShot.FlightPath is { Count: > 20 }, "flight path generated");
 
+var lowFlightShot = BallFlightCalculator.Calculate(new ShotData(
+    DateTimeOffset.Now,
+    "9 Iron",
+    CarryYards: null,
+    TotalYards: null,
+    OfflineYards: null,
+    ApexYards: null,
+    FlightTimeSeconds: null,
+    BallSpeedMph: 86.9,
+    LaunchAngleDeg: 6.5,
+    LaunchDirectionDeg: -5.8,
+    BackSpinRpm: 2_332,
+    SideSpinRpm: 0,
+    TotalSpinRpm: 2_332,
+    SpinAxisDeg: 0));
+Check(lowFlightShot.CarryYards is > 68 and < 75, "low-flight carry remains plausible");
+var lowFlightRollout = lowFlightShot.TotalYards!.Value - lowFlightShot.CarryYards!.Value;
+Check(lowFlightRollout is > 35 and < 42, "low-flight rollout is not artificially capped");
+
 var wedge = new GolfClub { Name = "Wedge", Kind = GolfClubKind.Wedge, LoftDegrees = 54 };
 var analyticsSession = new PracticeSession();
 analyticsSession.Shots.Add(StoredShot.FromShot(calculatedShot with { Club = wedge.DisplayName, CarryYards = 88, SwingType = "Full" }, wedge.Id));

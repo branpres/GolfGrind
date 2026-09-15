@@ -2,7 +2,7 @@
 
 Windows-first .NET 10 MAUI Blazor Hybrid application for a Square Golf launch monitor.
 
-## Current prototype (recovered v0.23.0)
+## Current prototype (recovered v0.23.1)
 
 This build reconstructs the accepted v0.14–v0.16 work on top of the preserved v0.13 archive.
 
@@ -353,6 +353,14 @@ This is a prototype build. Session and backup compatibility with earlier builds 
 - A connection now accepts ball-ready only after GolfGrind enables detection and observes a fresh no-ball/detected-to-ready cycle.
 - Tightened ready parsing to the captured `01/01` green-ready state and added protocol and recovery regression checks.
 - Added an `Export CSV` action to each saved session so a single GolfGrind session can be shared independently.
+
+### v0.23.1 conservative flight calibration and ready chime
+
+- Applies an isolated 2% carry calibration based on the clean nine-iron comparison set and records new shots as `BallFlightCalculator/2`.
+- Scales the tracer's down-range coordinates with carry so the visual landing point remains aligned with the displayed result.
+- Makes rollout responsive to low-launch shots without the previous 18%-of-carry ceiling; the deliberately conservative calibration can be retuned after multi-club testing.
+- Plays one short chime only when the active monitor transitions into a confirmed ball-ready state.
+- Adds a persistent `Ready chime` toggle to the toolbar, enabled by default.
 
 ### Build fix in v0.2.1
 

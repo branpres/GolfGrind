@@ -90,6 +90,7 @@ static void CheckCalibration()
     var adjusted = CalibrationMath.AdjustCarry(100, environment, personal);
     True(adjusted > 99 && adjusted < 103);
     var metadata = CalibrationMath.AttachMetadata(ValidShot(), environment, personal).Calculation!;
+    Equal("BallFlightCalculator/2", metadata.FlightModel);
     Equal(1.02, metadata.Environment.ReferenceCarryScale);
     Equal(0.98, metadata.PersonalAdjustment.CarryScale);
 }

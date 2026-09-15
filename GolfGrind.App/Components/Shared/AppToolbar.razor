@@ -1,3 +1,5 @@
+@inject IJSRuntime JS
+
 <section class="toolbar card">
     <div class="status-area">
         <span class="status-dot @(Status.IsConnected ? "online" : "")"></span>
@@ -37,6 +39,10 @@
             <input type="checkbox" checked="@KeepScreenAwake" @onchange="ScreenAwakeChanged" />
             <span>Keep screen awake</span>
         </label>
+        <label class="screen-awake-toggle" title="Play one short chime when the monitor confirms that the ball is ready">
+            <input type="checkbox" checked="@AudibleReadyNotification" @onchange="AudibleReadyNotificationChangedInternal" />
+            <span>Ready chime</span>
+        </label>
         @if (MonitorMode == "mock")
         {
             <button @onclick="SimulateShot" disabled="@(!MockConnected)">Simulate shot</button>
@@ -57,13 +63,18 @@
     [Parameter] public bool IsConnected { get; set; }
     [Parameter] public bool MockConnected { get; set; }
     [Parameter] public bool KeepScreenAwake { get; set; }
+    [Parameter] public bool AudibleReadyNotification { get; set; }
     [Parameter] public EventCallback<Guid> SelectedProfileIdChanged { get; set; }
     [Parameter] public EventCallback<Guid> SelectedClubIdChanged { get; set; }
     [Parameter] public EventCallback<string> MonitorModeChanged { get; set; }
     [Parameter] public EventCallback<bool> KeepScreenAwakeChanged { get; set; }
+    [Parameter] public EventCallback<bool> AudibleReadyNotificationChanged { get; set; }
     [Parameter] public EventCallback NewSession { get; set; }
     [Parameter] public EventCallback ToggleConnection { get; set; }
     [Parameter] public EventCallback SimulateShot { get; set; }
+
+    private bool previousBallReady;
+    private bool readyChimePending;
 
     private Task ProfileChanged(ChangeEventArgs args) =>
         Guid.TryParse(args.Value?.ToString(), out var id) ? SelectedProfileIdChanged.InvokeAsync(id) : Task.CompletedTask;
@@ -76,4 +87,31 @@
 
     private Task ScreenAwakeChanged(ChangeEventArgs args) =>
         KeepScreenAwakeChanged.InvokeAsync(args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase));
+
+    private Task AudibleReadyNotificationChangedInternal(ChangeEventArgs args) =>
+        AudibleReadyNotificationChanged.InvokeAsync(args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase));
+
+    protected override void OnParametersSet()
+    {
+        readyChimePending = AudibleReadyNotification && Status.IsBallReady && !previousBallReady;
+        previousBallReady = Status.IsBallReady;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!readyChimePending)
+            return;
+        readyChimePending = false;
+        try
+        {
+            await JS.InvokeVoidAsync("golfReadyChime.play");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+            // Audio may be blocked by the host; readiness remains usable visually.
+        }
+    }
 }

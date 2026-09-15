@@ -42,6 +42,7 @@ public partial class Home
     private int sessionToastVersion;
     private string monitorMode => MonitorWorkspace.MonitorMode;
     private bool keepScreenAwake => MonitorWorkspace.KeepScreenAwake;
+    private bool audibleReadyNotification => MonitorWorkspace.AudibleReadyNotification;
     private LaunchMonitorStatus status => MonitorWorkspace.Status;
     private int acceptedShotCount => MonitorWorkspace.AcceptedShotCount;
     private int rejectedShotCount => MonitorWorkspace.RejectedShotCount;
@@ -101,7 +102,6 @@ public partial class Home
         WedgeMatrixGuideStatus.LeftView => "Guided matrix stopped because you left the Wedge Matrix section.",
         _ => null
     };
-
     protected override void OnInitialized()
     {
         profiles = ProfileService.GetProfiles().ToList();
@@ -142,6 +142,9 @@ public partial class Home
     {
         MonitorWorkspace.SetKeepScreenAwake(enabled);
     }
+
+    private void SetAudibleReadyNotification(bool enabled) =>
+        MonitorWorkspace.SetAudibleReadyNotification(enabled);
 
     private async Task ToggleConnectionAsync()
     {

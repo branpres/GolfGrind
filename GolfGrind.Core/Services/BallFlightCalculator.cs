@@ -17,6 +17,8 @@ public static class BallFlightCalculator
     private const double MphToMetersPerSecond = 0.44704;
     private const double RpmToRadiansPerSecond = 2 * Math.PI / 60;
     private const double TimeStepSeconds = 0.005;
+    internal const double CarryCalibrationScale = 1.02;
+    internal const double RolloutCalibrationScale = 3.0;
 
     public static ShotData Calculate(ShotData measured)
     {
@@ -90,9 +92,13 @@ public static class BallFlightCalculator
         }
 
         path.Add(ToFlightPoint(position));
-        var carryYards = position.Y / MetersPerYard;
+        var rawCarryYards = position.Y / MetersPerYard;
+        var carryYards = rawCarryYards * CarryCalibrationScale;
         var offlineYards = position.X / MetersPerYard;
         var rolloutYards = EstimateRolloutYards(velocity, totalSpin, carryYards);
+        var calibratedPath = path
+            .Select(point => new FlightPoint(point.DownRangeYards * CarryCalibrationScale, point.OfflineYards, point.HeightYards))
+            .ToList();
 
         return measured with
         {
@@ -101,7 +107,7 @@ public static class BallFlightCalculator
             OfflineYards = Math.Round(offlineYards, 1),
             ApexYards = Math.Round(apexMeters / MetersPerYard, 1),
             FlightTimeSeconds = Math.Round(time, 2),
-            FlightPath = path
+            FlightPath = calibratedPath
         };
     }
 
@@ -112,8 +118,12 @@ public static class BallFlightCalculator
         var landingFactor = Math.Clamp(1 - descentAngle / DegreesToRadians(55), 0.08, 0.85);
         var spinFactor = Math.Clamp(1 - spinRpm / 10_000d, 0.12, 0.82);
         var rollMeters = horizontalSpeed * horizontalSpeed / (2 * GravityMetersPerSecondSquared * 1.7)
-            * landingFactor * spinFactor;
-        return Math.Clamp(rollMeters / MetersPerYard, 0, Math.Max(3, carryYards * 0.18));
+            * landingFactor * spinFactor * RolloutCalibrationScale;
+
+        // Low-launch shots can run well beyond 18% of carry. The wider ceiling
+        // still leaves landing speed, descent angle, and spin in control of the
+        // estimate while avoiding an artificial cutoff for punch/thin shots.
+        return Math.Clamp(rollMeters / MetersPerYard, 0, Math.Max(3, carryYards * 0.55));
     }
 
     private static FlightPoint ToFlightPoint(Vector3 value) => new(

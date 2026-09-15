@@ -28,6 +28,11 @@ public sealed class AppSettingsService
         get { lock (_gate) return _settings.KeepScreenAwake; }
     }
 
+    public bool AudibleReadyNotification
+    {
+        get { lock (_gate) return _settings.AudibleReadyNotification; }
+    }
+
     public string? SquareDeviceId
     {
         get { lock (_gate) return _settings.SquareDeviceId; }
@@ -40,6 +45,7 @@ public sealed class AppSettingsService
 
     public void SetActiveProfile(Guid profileId) => Update(settings => settings.ActiveProfileId = profileId);
     public void SetKeepScreenAwake(bool enabled) => Update(settings => settings.KeepScreenAwake = enabled);
+    public void SetAudibleReadyNotification(bool enabled) => Update(settings => settings.AudibleReadyNotification = enabled);
 
     public void RememberSquareDevice(string deviceId, string deviceName) => Update(settings =>
     {
@@ -64,6 +70,7 @@ public sealed class GolfGrindSettings
 {
     public Guid? ActiveProfileId { get; set; }
     public bool KeepScreenAwake { get; set; } = true;
+    public bool AudibleReadyNotification { get; set; } = true;
     public string? SquareDeviceId { get; set; }
     public string? SquareDeviceName { get; set; }
     public DateTimeOffset? SquareLastConnected { get; set; }

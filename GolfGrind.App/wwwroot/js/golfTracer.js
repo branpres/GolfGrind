@@ -65,4 +65,35 @@
     }
 
     window.golfTracer = { animate, cancel };
+
+    let readyAudioContext;
+    async function playReadyChime() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+
+        readyAudioContext ??= new AudioContext();
+        if (readyAudioContext.state === "suspended")
+            await readyAudioContext.resume();
+
+        const startedAt = readyAudioContext.currentTime;
+        const gain = readyAudioContext.createGain();
+        gain.gain.setValueAtTime(0.0001, startedAt);
+        gain.gain.exponentialRampToValueAtTime(0.16, startedAt + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startedAt + 0.55);
+        gain.connect(readyAudioContext.destination);
+
+        for (const [frequency, level] of [[880, 1], [1320, 0.35]]) {
+            const oscillator = readyAudioContext.createOscillator();
+            const partialGain = readyAudioContext.createGain();
+            oscillator.type = "sine";
+            oscillator.frequency.setValueAtTime(frequency, startedAt);
+            partialGain.gain.setValueAtTime(level, startedAt);
+            oscillator.connect(partialGain);
+            partialGain.connect(gain);
+            oscillator.start(startedAt);
+            oscillator.stop(startedAt + 0.56);
+        }
+    }
+
+    window.golfReadyChime = { play: playReadyChime };
 })();

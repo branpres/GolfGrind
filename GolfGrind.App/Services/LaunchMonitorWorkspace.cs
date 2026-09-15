@@ -18,6 +18,7 @@ public sealed class LaunchMonitorWorkspace(
     public MockLaunchMonitor MockMonitor => mockMonitor;
     public string MonitorMode { get; private set; } = "square";
     public bool KeepScreenAwake { get; private set; } = true;
+    public bool AudibleReadyNotification { get; private set; } = true;
     public LaunchMonitorStatus Status { get; private set; } = new(false, false, null, "Disconnected");
     public int AcceptedShotCount => coordinator.AcceptedShots;
     public int RejectedShotCount => coordinator.RejectedShots;
@@ -28,6 +29,7 @@ public sealed class LaunchMonitorWorkspace(
     public void Initialize()
     {
         KeepScreenAwake = settings.KeepScreenAwake;
+        AudibleReadyNotification = settings.AudibleReadyNotification;
         UpdateDisplayWakeLock();
     }
 
@@ -44,6 +46,12 @@ public sealed class LaunchMonitorWorkspace(
         KeepScreenAwake = enabled;
         settings.SetKeepScreenAwake(enabled);
         UpdateDisplayWakeLock();
+    }
+
+    public void SetAudibleReadyNotification(bool enabled)
+    {
+        AudibleReadyNotification = enabled;
+        settings.SetAudibleReadyNotification(enabled);
     }
 
     public async Task ToggleConnectionAsync(string selectedClub)
