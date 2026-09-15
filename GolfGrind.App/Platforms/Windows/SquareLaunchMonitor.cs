@@ -18,8 +18,10 @@ public sealed class SquareLaunchMonitor(ILogger<SquareLaunchMonitor> logger, App
     private readonly SemaphoreSlim _lifecycle = new(1, 1);
     private readonly SemaphoreSlim _writes = new(1, 1);
     private readonly SemaphoreSlim _diagnosticWrites = new(1, 1);
+    private readonly SemaphoreSlim _notificationProcessing = new(1, 1);
     private readonly List<GattDeviceService> _services = [];
     private readonly ConnectionStateMachine _stateMachine = new();
+    private readonly BallDetectionHealthTracker _ballDetectionHealth = new();
     private static readonly TimeSpan[] ReconnectDelays =
         [TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(8), TimeSpan.FromSeconds(15)];
 
@@ -37,6 +39,7 @@ public sealed class SquareLaunchMonitor(ILogger<SquareLaunchMonitor> logger, App
     private DateTimeOffset? _lastPacketAt;
     private DateTimeOffset? _lastHeartbeatAt;
     private DateTimeOffset? _connectedAt;
+    private DateTimeOffset? _ballDetectionEnabledAt;
     private string? _lastError;
     private byte _sequence;
     private int? _batteryPercent;
@@ -66,6 +69,7 @@ public sealed class SquareLaunchMonitor(ILogger<SquareLaunchMonitor> logger, App
             if (IsConnected)
                 return;
 
+            ResetConnectionTelemetry();
             InitializeDiagnosticsLog();
             SetState(LaunchMonitorConnectionState.Discovering);
             PublishStatus("Looking for a paired Square monitor…");
@@ -100,7 +104,7 @@ public sealed class SquareLaunchMonitor(ILogger<SquareLaunchMonitor> logger, App
             await WriteAsync(SquareProtocol.Heartbeat(NextSequence()), _connectionCts.Token);
             _lastHeartbeatAt = DateTimeOffset.UtcNow;
             await WriteAsync(SquareProtocol.SelectClub(NextSequence(), _club), _connectionCts.Token);
-            await WriteAsync(SquareProtocol.EnableBallDetection(NextSequence()), _connectionCts.Token);
+            await ArmBallDetectionAsync("Connected — waiting for the monitor's ready signal", _connectionCts.Token);
 
             _ = HeartbeatLoopAsync(_connectionCts.Token);
             _ = WatchdogLoopAsync(_connectionCts.Token);
@@ -280,13 +284,27 @@ public sealed class SquareLaunchMonitor(ILogger<SquareLaunchMonitor> logger, App
         if (packet is not { Length: > 0 })
             return;
 
+        var lockTaken = false;
         try
         {
-            _lastPacketAt = DateTimeOffset.UtcNow;
+            await _notificationProcessing.WaitAsync();
+            lockTaken = true;
+            var observedAt = DateTimeOffset.UtcNow;
+            _lastPacketAt = observedAt;
             await LogPacketAsync("RX", packet);
 
             if (SquareProtocol.TryParseBallReady(packet, out var ready))
             {
+                if (_ballDetectionEnabledAt is null)
+                    return;
+                var confirmedReady = _ballDetectionHealth.ObserveBallState(ready, observedAt);
+                if (ready && !confirmedReady)
+                {
+                    _ballReady = false;
+                    SetState(LaunchMonitorConnectionState.Connected);
+                    PublishStatus("Connected — waiting for a fresh ball-ready cycle");
+                    return;
+                }
                 _ballReady = ready;
                 SetState(ready ? LaunchMonitorConnectionState.BallReady : LaunchMonitorConnectionState.Connected);
                 PublishStatus(ready ? "Connected — ball ready" : "Connected — place ball in the hitting zone");
@@ -307,6 +325,8 @@ public sealed class SquareLaunchMonitor(ILogger<SquareLaunchMonitor> logger, App
                 _lastBallPacket = fingerprint;
                 _lastBallPacketAt = now;
                 _ballReady = false;
+                _ballDetectionEnabledAt = null;
+                _ballDetectionHealth.Reset();
                 _receivedShots++;
                 SetState(LaunchMonitorConnectionState.Connected);
                 PublishStatus("Shot received");
@@ -322,6 +342,11 @@ public sealed class SquareLaunchMonitor(ILogger<SquareLaunchMonitor> logger, App
             logger.LogWarning(ex, "Could not process a Square notification: {Packet}",
                 packet is null ? "<null>" : Convert.ToHexString(packet));
         }
+        finally
+        {
+            if (lockTaken)
+                _notificationProcessing.Release();
+        }
     }
 
     private async Task ReArmAfterShotAsync(CancellationToken cancellationToken)
@@ -329,7 +354,7 @@ public sealed class SquareLaunchMonitor(ILogger<SquareLaunchMonitor> logger, App
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
-            await WriteAsync(SquareProtocol.EnableBallDetection(NextSequence()), cancellationToken);
+            await ArmBallDetectionAsync("Shot received — waiting for the monitor's ready signal", cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -338,6 +363,17 @@ public sealed class SquareLaunchMonitor(ILogger<SquareLaunchMonitor> logger, App
         {
             logger.LogWarning(ex, "Could not re-arm Square ball detection");
         }
+    }
+
+    private async Task ArmBallDetectionAsync(string message, CancellationToken cancellationToken)
+    {
+        var armedAt = DateTimeOffset.UtcNow;
+        _ballReady = false;
+        _ballDetectionEnabledAt = armedAt;
+        _ballDetectionHealth.MarkArmed(armedAt);
+        SetState(LaunchMonitorConnectionState.Connected);
+        PublishStatus(message);
+        await WriteAsync(SquareProtocol.EnableBallDetection(NextSequence()), cancellationToken);
     }
 
     private async Task HeartbeatLoopAsync(CancellationToken cancellationToken)
@@ -379,6 +415,17 @@ public sealed class SquareLaunchMonitor(ILogger<SquareLaunchMonitor> logger, App
                 if (_lastHeartbeatAt is { } heartbeat && DateTimeOffset.UtcNow - heartbeat > TimeSpan.FromSeconds(15))
                 {
                     await HandleConnectionFaultAsync("Square heartbeat is stale; reconnecting…");
+                    return;
+                }
+                var recovery = _ballDetectionHealth.Evaluate(DateTimeOffset.UtcNow);
+                if (recovery == BallDetectionRecoveryAction.ReArm)
+                {
+                    await ArmBallDetectionAsync("Ball detection stalled — re-arming automatically…", cancellationToken);
+                    continue;
+                }
+                if (recovery == BallDetectionRecoveryAction.Reconnect)
+                {
+                    await HandleConnectionFaultAsync("Ball detection did not recover — reconnecting automatically…");
                     return;
                 }
                 var lastTraffic = _lastPacketAt ?? _connectedAt;
@@ -607,7 +654,17 @@ public sealed class SquareLaunchMonitor(ILogger<SquareLaunchMonitor> logger, App
         _connectionCts?.Dispose();
         _connectionCts = null;
         _batteryPercent = null;
+        ResetConnectionTelemetry();
+    }
+
+    private void ResetConnectionTelemetry()
+    {
         _ballReady = false;
+        _ballDetectionEnabledAt = null;
+        _lastPacketAt = null;
+        _lastHeartbeatAt = null;
+        _connectedAt = null;
+        _ballDetectionHealth.Reset();
     }
 
     private byte NextSequence() => _sequence++;
@@ -662,5 +719,6 @@ public sealed class SquareLaunchMonitor(ILogger<SquareLaunchMonitor> logger, App
         _lifecycle.Dispose();
         _writes.Dispose();
         _diagnosticWrites.Dispose();
+        _notificationProcessing.Dispose();
     }
 }

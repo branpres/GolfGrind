@@ -75,6 +75,7 @@
                 <div class="session-stat"><strong>@AverageCarry(session)</strong><span>avg carry</span></div>
                 <div class="session-row-actions">
                     <button @onclick="() => ToggleDetails.InvokeAsync(session.Id)">@(ExpandedSessionId == session.Id ? "Hide" : "View shots")</button>
+                    <button @onclick="() => ExportSession.InvokeAsync(session)">Export CSV</button>
                     <button class="danger @(PendingDeleteSessionId == session.Id ? "confirm" : "")" @onclick="() => DeleteSession.InvokeAsync(session.Id)">
                         @(PendingDeleteSessionId == session.Id ? "Confirm delete" : "Delete session")
                     </button>
@@ -127,6 +128,7 @@
     [Parameter] public EventCallback ConfirmImport { get; set; }
     [Parameter] public EventCallback CancelImport { get; set; }
     [Parameter] public EventCallback<Guid> ToggleDetails { get; set; }
+    [Parameter] public EventCallback<PracticeSession> ExportSession { get; set; }
     [Parameter] public EventCallback<Guid> DeleteSession { get; set; }
     [Parameter] public EventCallback<PracticeSession> RenameSession { get; set; }
     [Parameter] public EventCallback<ShotSelection> ToggleExclusion { get; set; }

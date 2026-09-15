@@ -32,7 +32,10 @@ public static class SquareProtocol
         if (packet.Length < 5 || packet[0] != 0x11 || packet[1] != 0x01)
             return false;
 
-        ready = (packet[3] is 0x01 or 0x02) && packet[4] == 0x01;
+        // Captured device traffic transitions through 00/00 (no ball), 00/01
+        // (ball detected but not ready), then 01/01 (ready/green). Do not treat
+        // undocumented state 02 as ready without packet evidence.
+        ready = packet[3] == 0x01 && packet[4] == 0x01;
         return true;
     }
 

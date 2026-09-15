@@ -15,6 +15,28 @@ public partial class Home
     private Task HandleDeleteShot(ShotSelection shot) =>
         RequestDeleteShot(shot.SessionId, shot.HitAt);
 
+    private async Task ExportSessionAsync(PracticeSession session)
+    {
+        var toastVersion = ++sessionToastVersion;
+        try
+        {
+            var path = BackupService.ExportSessionCsv(ActiveProfileName, session);
+            sessionToast = $"{SessionTitle(session)} exported to {path}";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            sessionToast = $"Session CSV could not be written: {exception.Message}";
+        }
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        if (sessionToastVersion == toastVersion)
+        {
+            sessionToast = null;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     private async Task RequestDeleteSession(Guid sessionId)
     {
         var session = SessionStorage.GetSessions().FirstOrDefault(item => item.Id == sessionId);

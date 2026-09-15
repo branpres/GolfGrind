@@ -23,7 +23,8 @@ var checks = new (string Name, Action Run)[]
     ("mapped clubs are optional for practice", CheckOptionalPracticeMapping),
     ("fairway finder club selection and statistics", CheckFairwayFinder),
     ("flight path remains calculated", CheckFlightPath),
-    ("flight path reflects launch measurements", CheckFlightPathInputs)
+    ("flight path reflects launch measurements", CheckFlightPathInputs),
+    ("ball detection stall recovery", CheckBallDetectionRecovery)
 };
 
 foreach (var check in checks)
@@ -42,6 +43,29 @@ static void CheckConnectionState()
     machine.TransitionTo(LaunchMonitorConnectionState.BallReady);
     machine.TransitionTo(LaunchMonitorConnectionState.Reconnecting);
     Equal(LaunchMonitorConnectionState.Reconnecting, machine.State);
+}
+
+static void CheckBallDetectionRecovery()
+{
+    var start = DateTimeOffset.UtcNow;
+    var tracker = new BallDetectionHealthTracker(TimeSpan.FromSeconds(12));
+    tracker.MarkArmed(start);
+    Equal(BallDetectionRecoveryAction.None, tracker.Evaluate(start.AddSeconds(12)));
+    Equal(BallDetectionRecoveryAction.ReArm, tracker.Evaluate(start.AddSeconds(13)));
+    tracker.MarkArmed(start.AddSeconds(13));
+    Equal(BallDetectionRecoveryAction.None, tracker.Evaluate(start.AddSeconds(25)));
+    Equal(BallDetectionRecoveryAction.Reconnect, tracker.Evaluate(start.AddSeconds(26)));
+
+    tracker.Reset();
+    tracker.MarkArmed(start);
+    True(!tracker.ObserveBallState(false, start.AddSeconds(10)));
+    True(tracker.ObserveBallState(true, start.AddSeconds(11)));
+    Equal(BallDetectionRecoveryAction.None, tracker.Evaluate(start.AddSeconds(20)));
+
+    tracker.Reset();
+    tracker.MarkArmed(start);
+    True(!tracker.ObserveBallState(true, start.AddSeconds(1)));
+    Equal(BallDetectionRecoveryAction.ReArm, tracker.Evaluate(start.AddSeconds(13)));
 }
 
 static void CheckShotValidation()

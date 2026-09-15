@@ -15,6 +15,10 @@ readyPacket[1] = 0x01;
 readyPacket[3] = 0x01;
 readyPacket[4] = 0x01;
 Check(SquareProtocol.TryParseBallReady(readyPacket, out var ready) && ready, "ball-ready packet");
+readyPacket[3] = 0x00;
+Check(SquareProtocol.TryParseBallReady(readyPacket, out ready) && !ready, "detected ball is not ready yet");
+readyPacket[3] = 0x02;
+Check(SquareProtocol.TryParseBallReady(readyPacket, out ready) && !ready, "undocumented ball state is not treated as ready");
 
 var shotPacket = new byte[17];
 shotPacket[0] = 0x11;

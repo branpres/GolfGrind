@@ -9,6 +9,7 @@ namespace GolfGrind.App.Services;
 public sealed class BackupService
 {
     private const int CurrentFormatVersion = 3;
+    private const string SessionCsvHeader = "Golfer,Session,Session Type,Game,Game Completed,Started,Ended,Hit At,Club,Swing,Practice Mode,Shot Number,Recommended Club,Recommended Swing,Target Yards,Proximity Yards,Score,Result,Included In Analytics,Carry Yards,Total Yards,Offline Yards,Apex Yards,Flight Time Seconds,Ball Speed MPH,Launch Angle Degrees,Launch Direction Degrees,Backspin RPM,Sidespin RPM,Total Spin RPM,Spin Axis Degrees,Flight Model,Calculation Profile,Altitude Feet,Temperature F,Humidity Percent,Reference Carry Scale,Personal Carry Scale,Personal Offline Bias Yards";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
@@ -50,6 +51,17 @@ public sealed class BackupService
                 }
             }
         }
+        File.WriteAllText(path, builder.ToString());
+        return path;
+    }
+
+    public string ExportSessionCsv(string golferName, PracticeSession session)
+    {
+        var path = CreateExportPath($"session-{SafeFilePart(session.Name)}", "csv");
+        var builder = new StringBuilder();
+        builder.AppendLine(SessionCsvHeader);
+        foreach (var shot in session.Shots.OrderBy(item => item.HitAt))
+            AppendSessionShot(builder, golferName, session, shot);
         File.WriteAllText(path, builder.ToString());
         return path;
     }
@@ -108,6 +120,29 @@ public sealed class BackupService
         var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Golf Grind");
         Directory.CreateDirectory(directory);
         return Path.Combine(directory, $"golf-grind-{suffix}-{DateTime.Now:yyyyMMdd-HHmmss}.{extension}");
+    }
+
+    private static void AppendSessionShot(StringBuilder builder, string golferName, PracticeSession session, StoredShot shot)
+    {
+        builder.AppendLine(string.Join(",",
+            Csv(golferName), Csv(session.Name), Csv(session.SessionType), Csv(session.PracticeGame?.DisplayName()), session.GameSummary?.Completed.ToString() ?? "",
+            Csv(session.StartedAt.ToString("O")), Csv(session.EndedAt?.ToString("O")), Csv(shot.HitAt.ToString("O")), Csv(shot.Club), Csv(shot.SwingType), Csv(shot.PracticeMode),
+            shot.PracticeGame?.ShotNumber.ToString(CultureInfo.InvariantCulture) ?? "", Csv(shot.PracticeGame?.RecommendedClub), Csv(shot.PracticeGame?.RecommendedSwing),
+            Number(shot.TargetYards), Number(shot.ProximityYards), shot.PracticeScore?.ToString(CultureInfo.InvariantCulture) ?? "", Csv(shot.PracticeGame?.ResultLabel), shot.ExcludedFromAnalytics ? "No" : "Yes",
+            Number(shot.CarryYards), Number(shot.TotalYards), Number(shot.OfflineYards), Number(shot.ApexYards), Number(shot.FlightTimeSeconds), Number(shot.BallSpeedMph),
+            Number(shot.LaunchAngleDeg), Number(shot.LaunchDirectionDeg), Number(shot.BackSpinRpm), Number(shot.SideSpinRpm), Number(shot.TotalSpinRpm), Number(shot.SpinAxisDeg),
+            Csv(shot.Calculation?.FlightModel), Csv(shot.Calculation?.CalculationProfile), Number(shot.Calculation?.Environment.AltitudeFeet),
+            Number(shot.Calculation?.Environment.TemperatureFahrenheit), Number(shot.Calculation?.Environment.RelativeHumidityPercent), Number(shot.Calculation?.Environment.ReferenceCarryScale),
+            Number(shot.Calculation?.PersonalAdjustment.CarryScale), Number(shot.Calculation?.PersonalAdjustment.OfflineBiasYards)));
+    }
+
+    private static string SafeFilePart(string? value)
+    {
+        var source = string.IsNullOrWhiteSpace(value) ? "untitled" : value.Trim();
+        var invalid = Path.GetInvalidFileNameChars();
+        var safe = new string(source.Select(character => invalid.Contains(character) ? '-' : character).ToArray());
+        var compact = string.Join("-", safe.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return string.IsNullOrWhiteSpace(compact) ? "untitled" : compact;
     }
 
     private static string Csv(string? value) => $"\"{(value ?? "").Replace("\"", "\"\"")}\"";

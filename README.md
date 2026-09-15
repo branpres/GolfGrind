@@ -2,7 +2,7 @@
 
 Windows-first .NET 10 MAUI Blazor Hybrid application for a Square Golf launch monitor.
 
-## Current prototype (recovered v0.22.9)
+## Current prototype (recovered v0.23.0)
 
 This build reconstructs the accepted v0.14–v0.16 work on top of the preserved v0.13 archive.
 
@@ -344,6 +344,15 @@ This is a prototype build. Session and backup compatibility with earlier builds 
 - Removed the dark backgrounds from yardage labels in both tracer views.
 - Side-view labels are now bold, opaque white text.
 - Perspective labels now appear once in the center of each 50-yard line as translucent white text, with the opaque tracer rendered over them.
+
+### v0.23.0 ball-detection recovery
+
+- Added independent freshness tracking for the monitor's ball-state telemetry; ordinary heartbeat and auxiliary packets no longer conceal a stalled detector.
+- When ball-state packets stop for 12 seconds, GolfGrind clears stale readiness and re-arms detection. If telemetry remains absent for another 12 seconds, it reconnects automatically while preserving the activity.
+- Serialized notification processing so delayed packets cannot race and overwrite a newer ready/not-ready state.
+- A connection now accepts ball-ready only after GolfGrind enables detection and observes a fresh no-ball/detected-to-ready cycle.
+- Tightened ready parsing to the captured `01/01` green-ready state and added protocol and recovery regression checks.
+- Added an `Export CSV` action to each saved session so a single GolfGrind session can be shared independently.
 
 ### Build fix in v0.2.1
 
