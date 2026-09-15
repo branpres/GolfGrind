@@ -36,7 +36,8 @@ public sealed record StoredShot(
     int? PracticeScore = null,
     bool ExcludedFromAnalytics = false,
     PracticeGameShotSnapshot? PracticeGame = null,
-    ShotCalculationMetadata? Calculation = null)
+    ShotCalculationMetadata? Calculation = null,
+    SpinDataSource SpinSource = SpinDataSource.Unavailable)
 {
     public static StoredShot FromShot(ShotData shot, Guid? clubId = null) => new(
         shot.HitAt,
@@ -61,5 +62,6 @@ public sealed record StoredShot(
         shot.PracticeScore,
         false,
         shot.PracticeGame,
-        shot.Calculation);
+        shot.Calculation,
+        shot.SpinSource);
 }

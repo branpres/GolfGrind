@@ -151,7 +151,7 @@
                 @SummaryMetric("Offline", LastShot.OfflineYards, "yd", signed: true, help: GolfTerms.Offline)
                 @SummaryMetric("Ball speed", LastShot.BallSpeedMph, "mph", help: GolfTerms.BallSpeed)
                 @SummaryMetric("Launch", LastShot.LaunchAngleDeg, "°", help: GolfTerms.Launch)
-                @SummaryMetric("Spin", LastShot.TotalSpinRpm ?? LastShot.BackSpinRpm, "rpm", decimals: 0, help: GolfTerms.TotalSpin)
+                @SummaryMetric(LastShot.SpinSource == SpinDataSource.Estimated ? "Spin (estimated)" : "Spin", LastShot.TotalSpinRpm ?? LastShot.BackSpinRpm, "rpm", decimals: 0, help: GolfTerms.TotalSpin)
             </div>
         }
     }

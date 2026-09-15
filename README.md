@@ -2,7 +2,7 @@
 
 Windows-first .NET 10 MAUI Blazor Hybrid application for a Square Golf launch monitor.
 
-## Current prototype (recovered v0.23.1)
+## Current prototype (recovered v0.23.2)
 
 This build reconstructs the accepted v0.14–v0.16 work on top of the preserved v0.13 archive.
 
@@ -87,6 +87,16 @@ This build reconstructs the accepted v0.14–v0.16 work on top of the preserved 
 - Storage, backup, profile and launch-monitor implementations remain behind services and interfaces.
 
 This is a prototype build. Session and backup compatibility with earlier builds is intentionally not guaranteed while the data model is still changing.
+
+### v0.23.2 flight-model calibration
+
+- Carry now uses the full horizontal distance to the landing point, including lateral travel, matching the Square export definition.
+- Removed the temporary 2% carry boost after multi-club comparison showed essentially zero overall bias without it.
+- Added a separate ground-roll calculation for non-airborne shots such as worm burners.
+- Added club- and launch-aware spin estimation when measured spin is unavailable, with measured versus estimated provenance retained, displayed, and exported.
+- Preserved measured topspin direction so topped shots receive downward rather than upward aerodynamic lift.
+- Advanced the recorded flight model identifier to `BallFlightCalculator/3`.
+- Retained the existing lateral-flight coefficients: wider scaling reduced average directional bias but made individual offline errors materially worse in the supplied comparison set.
 
 ## Recovery release notes
 

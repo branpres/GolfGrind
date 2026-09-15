@@ -8,8 +8,8 @@ namespace GolfGrind.App.Services;
 
 public sealed class BackupService
 {
-    private const int CurrentFormatVersion = 3;
-    private const string SessionCsvHeader = "Golfer,Session,Session Type,Game,Game Completed,Started,Ended,Hit At,Club,Swing,Practice Mode,Shot Number,Recommended Club,Recommended Swing,Target Yards,Proximity Yards,Score,Result,Included In Analytics,Carry Yards,Total Yards,Offline Yards,Apex Yards,Flight Time Seconds,Ball Speed MPH,Launch Angle Degrees,Launch Direction Degrees,Backspin RPM,Sidespin RPM,Total Spin RPM,Spin Axis Degrees,Flight Model,Calculation Profile,Altitude Feet,Temperature F,Humidity Percent,Reference Carry Scale,Personal Carry Scale,Personal Offline Bias Yards";
+    private const int CurrentFormatVersion = 4;
+    private const string SessionCsvHeader = "Golfer,Session,Session Type,Game,Game Completed,Started,Ended,Hit At,Club,Swing,Practice Mode,Shot Number,Recommended Club,Recommended Swing,Target Yards,Proximity Yards,Score,Result,Included In Analytics,Carry Yards,Total Yards,Offline Yards,Apex Yards,Flight Time Seconds,Ball Speed MPH,Launch Angle Degrees,Launch Direction Degrees,Backspin RPM,Sidespin RPM,Total Spin RPM,Spin Axis Degrees,Spin Source,Flight Model,Calculation Profile,Altitude Feet,Temperature F,Humidity Percent,Reference Carry Scale,Personal Carry Scale,Personal Offline Bias Yards";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
@@ -34,7 +34,7 @@ public sealed class BackupService
     {
         var path = CreateExportPath("shots", "csv");
         var builder = new StringBuilder();
-        builder.AppendLine("Golfer,Session,Session Type,Game,Game Completed,Started,Hit At,Club,Swing,Practice Mode,Shot Number,Recommended Club,Recommended Swing,Target Yards,Proximity Yards,Score,Result,Included In Analytics,Carry Yards,Total Yards,Offline Yards,Ball Speed MPH,Launch Angle,Launch Direction,Total Spin RPM,Spin Axis,Flight Model,Calculation Profile,Altitude Feet,Temperature F,Humidity Percent,Reference Carry Scale,Personal Carry Scale,Personal Offline Bias");
+        builder.AppendLine("Golfer,Session,Session Type,Game,Game Completed,Started,Hit At,Club,Swing,Practice Mode,Shot Number,Recommended Club,Recommended Swing,Target Yards,Proximity Yards,Score,Result,Included In Analytics,Carry Yards,Total Yards,Offline Yards,Ball Speed MPH,Launch Angle,Launch Direction,Total Spin RPM,Spin Axis,Spin Source,Flight Model,Calculation Profile,Altitude Feet,Temperature F,Humidity Percent,Reference Carry Scale,Personal Carry Scale,Personal Offline Bias");
         foreach (var golfer in golfers)
         {
             foreach (var session in golfer.Sessions.OrderBy(item => item.StartedAt))
@@ -45,7 +45,7 @@ public sealed class BackupService
                         Csv(golfer.Profile.Name), Csv(session.Name), Csv(session.SessionType), Csv(session.PracticeGame?.DisplayName()), session.GameSummary?.Completed.ToString() ?? "", Csv(session.StartedAt.ToString("O")), Csv(shot.HitAt.ToString("O")),
                         Csv(shot.Club), Csv(shot.SwingType), Csv(shot.PracticeMode), shot.PracticeGame?.ShotNumber.ToString(CultureInfo.InvariantCulture) ?? "", Csv(shot.PracticeGame?.RecommendedClub), Csv(shot.PracticeGame?.RecommendedSwing), Number(shot.TargetYards), Number(shot.ProximityYards), shot.PracticeScore?.ToString(CultureInfo.InvariantCulture) ?? "", Csv(shot.PracticeGame?.ResultLabel), shot.ExcludedFromAnalytics ? "No" : "Yes",
                         Number(shot.CarryYards), Number(shot.TotalYards), Number(shot.OfflineYards), Number(shot.BallSpeedMph), Number(shot.LaunchAngleDeg),
-                        Number(shot.LaunchDirectionDeg), Number(shot.TotalSpinRpm), Number(shot.SpinAxisDeg), Csv(shot.Calculation?.FlightModel), Csv(shot.Calculation?.CalculationProfile),
+                        Number(shot.LaunchDirectionDeg), Number(shot.TotalSpinRpm), Number(shot.SpinAxisDeg), Csv(shot.SpinSource.ToString()), Csv(shot.Calculation?.FlightModel), Csv(shot.Calculation?.CalculationProfile),
                         Number(shot.Calculation?.Environment.AltitudeFeet), Number(shot.Calculation?.Environment.TemperatureFahrenheit), Number(shot.Calculation?.Environment.RelativeHumidityPercent),
                         Number(shot.Calculation?.Environment.ReferenceCarryScale), Number(shot.Calculation?.PersonalAdjustment.CarryScale), Number(shot.Calculation?.PersonalAdjustment.OfflineBiasYards)));
                 }
@@ -130,7 +130,7 @@ public sealed class BackupService
             shot.PracticeGame?.ShotNumber.ToString(CultureInfo.InvariantCulture) ?? "", Csv(shot.PracticeGame?.RecommendedClub), Csv(shot.PracticeGame?.RecommendedSwing),
             Number(shot.TargetYards), Number(shot.ProximityYards), shot.PracticeScore?.ToString(CultureInfo.InvariantCulture) ?? "", Csv(shot.PracticeGame?.ResultLabel), shot.ExcludedFromAnalytics ? "No" : "Yes",
             Number(shot.CarryYards), Number(shot.TotalYards), Number(shot.OfflineYards), Number(shot.ApexYards), Number(shot.FlightTimeSeconds), Number(shot.BallSpeedMph),
-            Number(shot.LaunchAngleDeg), Number(shot.LaunchDirectionDeg), Number(shot.BackSpinRpm), Number(shot.SideSpinRpm), Number(shot.TotalSpinRpm), Number(shot.SpinAxisDeg),
+            Number(shot.LaunchAngleDeg), Number(shot.LaunchDirectionDeg), Number(shot.BackSpinRpm), Number(shot.SideSpinRpm), Number(shot.TotalSpinRpm), Number(shot.SpinAxisDeg), Csv(shot.SpinSource.ToString()),
             Csv(shot.Calculation?.FlightModel), Csv(shot.Calculation?.CalculationProfile), Number(shot.Calculation?.Environment.AltitudeFeet),
             Number(shot.Calculation?.Environment.TemperatureFahrenheit), Number(shot.Calculation?.Environment.RelativeHumidityPercent), Number(shot.Calculation?.Environment.ReferenceCarryScale),
             Number(shot.Calculation?.PersonalAdjustment.CarryScale), Number(shot.Calculation?.PersonalAdjustment.OfflineBiasYards)));

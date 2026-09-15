@@ -38,7 +38,13 @@
                 <td>@DisplaySigned(shot.OfflineYards)</td>
                 <td>@shot.BallSpeedMph.ToString("0.0")</td>
                 <td>@shot.LaunchAngleDeg.ToString("0.0")°</td>
-                <td>@shot.BackSpinRpm.ToString("0")</td>
+                <td>
+                    @shot.BackSpinRpm.ToString("0")
+                    @if (shot.SpinSource == SpinDataSource.Estimated)
+                    {
+                        <span class="muted"> est.</span>
+                    }
+                </td>
                 <td>
                     <div class="shot-row-actions">
                         <button class="exclude-shot @(shot.ExcludedFromAnalytics ? "excluded" : "")" @onclick="() => ToggleExclusion.InvokeAsync(selection)">@(shot.ExcludedFromAnalytics ? "Include" : "Exclude")</button>

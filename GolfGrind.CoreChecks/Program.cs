@@ -24,6 +24,11 @@ var checks = new (string Name, Action Run)[]
     ("fairway finder club selection and statistics", CheckFairwayFinder),
     ("flight path remains calculated", CheckFlightPath),
     ("flight path reflects launch measurements", CheckFlightPathInputs),
+    ("carry includes lateral travel", CheckRadialCarry),
+    ("missing spin is estimated and identified", CheckEstimatedSpin),
+    ("measured spin remains identified", CheckMeasuredSpin),
+    ("topspin preserves downward spin direction", CheckTopspin),
+    ("ground-running shots use a roll model", CheckGroundShot),
     ("ball detection stall recovery", CheckBallDetectionRecovery)
 };
 
@@ -90,7 +95,7 @@ static void CheckCalibration()
     var adjusted = CalibrationMath.AdjustCarry(100, environment, personal);
     True(adjusted > 99 && adjusted < 103);
     var metadata = CalibrationMath.AttachMetadata(ValidShot(), environment, personal).Calculation!;
-    Equal("BallFlightCalculator/2", metadata.FlightModel);
+    Equal("BallFlightCalculator/3", metadata.FlightModel);
     Equal(1.02, metadata.Environment.ReferenceCarryScale);
     Equal(0.98, metadata.PersonalAdjustment.CarryScale);
 }
@@ -483,6 +488,84 @@ static void CheckFlightPathInputs()
 
     True(highLaunch.ApexYards > lowLaunch.ApexYards);
     True(rightLaunch.OfflineYards > lowLaunch.OfflineYards);
+}
+
+static void CheckRadialCarry()
+{
+    var baseline = ValidShot() with
+    {
+        CarryYards = null,
+        TotalYards = null,
+        OfflineYards = null,
+        ApexYards = null,
+        FlightTimeSeconds = null,
+        LaunchDirectionDeg = 0,
+        TotalSpinRpm = null,
+        SpinAxisDeg = null,
+        BackSpinRpm = 0,
+        SideSpinRpm = 0
+    };
+    var straight = BallFlightCalculator.Calculate(baseline);
+    var angled = BallFlightCalculator.Calculate(baseline with { LaunchDirectionDeg = 25 });
+
+    True(Math.Abs(straight.CarryYards!.Value - angled.CarryYards!.Value) < 0.3);
+    True(angled.OfflineYards is > 50);
+}
+
+static void CheckEstimatedSpin()
+{
+    var calculated = BallFlightCalculator.Calculate(ValidShot() with
+    {
+        TotalSpinRpm = 0,
+        SpinAxisDeg = 0,
+        BackSpinRpm = 0,
+        SideSpinRpm = 0
+    });
+
+    Equal(SpinDataSource.Estimated, calculated.SpinSource);
+    True(calculated.TotalSpinRpm is > 1000);
+}
+
+static void CheckMeasuredSpin()
+{
+    var calculated = BallFlightCalculator.Calculate(ValidShot());
+    Equal(SpinDataSource.Measured, calculated.SpinSource);
+    True(calculated.TotalSpinRpm is > 5000);
+}
+
+static void CheckTopspin()
+{
+    var calculated = BallFlightCalculator.Calculate(ValidShot() with
+    {
+        TotalSpinRpm = 343,
+        SpinAxisDeg = 26.1,
+        BackSpinRpm = -308,
+        SideSpinRpm = 150
+    });
+
+    Equal(SpinDataSource.Measured, calculated.SpinSource);
+    True(calculated.BackSpinRpm < 0);
+    True(calculated.SpinAxisDeg is > 90);
+}
+
+static void CheckGroundShot()
+{
+    var calculated = BallFlightCalculator.Calculate(ValidShot() with
+    {
+        Club = "5 Hybrid",
+        BallSpeedMph = 108,
+        LaunchAngleDeg = -0.3,
+        LaunchDirectionDeg = -13.9,
+        TotalSpinRpm = 4187,
+        SpinAxisDeg = 36.2,
+        BackSpinRpm = 3378,
+        SideSpinRpm = 2474
+    });
+
+    Equal(0d, calculated.CarryYards!.Value);
+    True(calculated.TotalYards is > 125 and < 135);
+    Equal(0d, calculated.ApexYards!.Value);
+    True(calculated.FlightPath is { Count: 2 });
 }
 
 static ShotData ValidShot() => new(

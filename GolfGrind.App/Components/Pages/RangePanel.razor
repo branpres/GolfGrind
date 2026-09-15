@@ -25,12 +25,12 @@
                 @Metric("Ball speed", LastShot.BallSpeedMph, "mph", help: GolfTerms.BallSpeed)
                 @Metric("Launch", LastShot.LaunchAngleDeg, "°", help: GolfTerms.Launch)
                 @Metric("Launch dir", LastShot.LaunchDirectionDeg, "°", signed: true, help: GolfTerms.LaunchDirection)
-                @Metric("Total spin", LastShot.TotalSpinRpm, "rpm", decimals: 0, help: GolfTerms.TotalSpin)
+                @Metric(SpinLabel("Total spin", LastShot), LastShot.TotalSpinRpm, "rpm", decimals: 0, help: GolfTerms.TotalSpin)
                 @Metric("Spin axis", LastShot.SpinAxisDeg, "°", signed: true, help: GolfTerms.SpinAxis)
                 @Metric("Backspin", LastShot.BackSpinRpm, "rpm", decimals: 0, help: GolfTerms.Backspin)
                 @Metric("Sidespin", LastShot.SideSpinRpm, "rpm", decimals: 0, signed: true, help: GolfTerms.Sidespin)
             </div>
-            <p class="muted estimate-note">Carry, total, offline, apex, flight time, and tracer are app estimates calculated from Square's measured ball data.</p>
+            <p class="muted estimate-note">Carry, total, offline, apex, flight time, and tracer are app estimates. @SpinStatus(LastShot)</p>
         }
     </section>
 </div>
@@ -58,6 +58,16 @@
     [Parameter] public Func<string, string?, double?, bool>? IsPotentialOutlier { get; set; }
     [Parameter] public Func<Guid, DateTimeOffset, bool>? IsDeletePending { get; set; }
     [Parameter] public EventCallback<ShotSelection> ToggleExclusion { get; set; }
+
+    private static string SpinLabel(string label, ShotData shot) =>
+        shot.SpinSource == SpinDataSource.Estimated ? $"{label} (estimated)" : label;
+
+    private static string SpinStatus(ShotData shot) => shot.SpinSource switch
+    {
+        SpinDataSource.Measured => "Spin was measured by the launch monitor.",
+        SpinDataSource.Estimated => "Spin was estimated because a measured reading was not available.",
+        _ => "Spin was not available."
+    };
     [Parameter] public EventCallback<ShotSelection> DeleteShot { get; set; }
 
     private static RenderFragment Metric(string label, double? value, string unit, int decimals = 1, bool signed = false, string? help = null) => builder =>

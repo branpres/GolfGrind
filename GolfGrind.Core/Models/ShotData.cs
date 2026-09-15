@@ -1,5 +1,12 @@
 namespace GolfGrind.Core.Models;
 
+public enum SpinDataSource
+{
+    Unavailable,
+    Measured,
+    Estimated
+}
+
 public sealed record ShotData(
     DateTimeOffset HitAt,
     string Club,
@@ -27,7 +34,8 @@ public sealed record ShotData(
     double? ProximityYards = null,
     int? PracticeScore = null,
     PracticeGameShotSnapshot? PracticeGame = null,
-    ShotCalculationMetadata? Calculation = null);
+    ShotCalculationMetadata? Calculation = null,
+    SpinDataSource SpinSource = SpinDataSource.Unavailable);
 
 public readonly record struct FlightPoint(
     double DownRangeYards,

@@ -24,6 +24,6 @@
 
 All internal state is rooted at `%LOCALAPPDATA%\GolfGrind`. `profiles.json` stores golfer identities, `settings.json` stores application and remembered-device settings, and each `profiles\<id>` directory contains `bag.json` plus individual session files. These stores use atomic validated writes and last-known-good recovery. User-requested exports and packet diagnostics remain in `Documents\Golf Grind`.
 
-Backward compatibility is not a v0.23.1 requirement. This build does not migrate data from MAUI's previous application-ID-based files or preferences. Practice modes and their snapshots may change without migrations while the prototype is being refined. A damaged JSON file is still quarantined, and its last-known-good copy is restored when available.
+Backward compatibility is not a v0.23.2 requirement. This build does not migrate data from MAUI's previous application-ID-based files or preferences. Practice modes and their snapshots may change without migrations while the prototype is being refined. A damaged JSON file is still quarantined, and its last-known-good copy is restored when available.
 
 v0.16 preserves the active in-memory activity during a Bluetooth reconnect. Persisted checkpoint/resume after closing the app or restarting Windows remains future work.
