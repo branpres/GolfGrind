@@ -75,7 +75,7 @@ public static class CalibrationMath
         ShotData shot,
         EnvironmentalCalibration environment,
         PersonalShotAdjustment personal,
-        string flightModel = "BallFlightCalculator/3",
+        string flightModel = "BallFlightCalculator/4",
         string calculationProfile = "Standard") => shot with
         {
             Calculation = new(flightModel, calculationProfile, environment, personal, DateTimeOffset.UtcNow)

@@ -13,6 +13,7 @@ var checks = new (string Name, Action Run)[]
     ("calibration datasets stay separate", CheckCalibrationDataSeparation),
     ("performance distance metrics", CheckPerformanceDistanceMetrics),
     ("analytics dashboard projections", CheckAnalyticsDashboard),
+    ("analytics survives regenerated club identifiers", CheckAnalyticsRegeneratedClubId),
     ("guided activity state", CheckGuidedActivityState),
     ("practice recommends wedge swing", CheckWedgeSwingRecommendation),
     ("approach practice carry and total modes", CheckApproachPractice),
@@ -95,7 +96,7 @@ static void CheckCalibration()
     var adjusted = CalibrationMath.AdjustCarry(100, environment, personal);
     True(adjusted > 99 && adjusted < 103);
     var metadata = CalibrationMath.AttachMetadata(ValidShot(), environment, personal).Calculation!;
-    Equal("BallFlightCalculator/3", metadata.FlightModel);
+    Equal("BallFlightCalculator/4", metadata.FlightModel);
     Equal(1.02, metadata.Environment.ReferenceCarryScale);
     Equal(0.98, metadata.PersonalAdjustment.CarryScale);
 }
@@ -205,6 +206,33 @@ static void CheckAnalyticsDashboard()
     Equal(10d, dashboard.SessionRows[0].DispersionWidth!.Value);
     Equal("Low", dashboard.Confidence);
     Equal(0, dashboard.ExcludedCount);
+}
+
+static void CheckAnalyticsRegeneratedClubId()
+{
+    var originalIron = new GolfClub { Name = "9 Iron", Kind = GolfClubKind.Iron };
+    var regeneratedIron = new GolfClub { Name = "9 Iron", Kind = GolfClubKind.Iron };
+    var sessions = new[]
+    {
+        new PracticeSession
+        {
+            Name = "Before restart",
+            SessionType = "Range",
+            Shots = [StoredShot.FromShot(ValidShot() with { Club = originalIron.DisplayName }, originalIron.Id)]
+        },
+        new PracticeSession
+        {
+            Name = "After restart",
+            SessionType = "Range",
+            Shots = [StoredShot.FromShot(ValidShot() with { Club = regeneratedIron.DisplayName }, regeneratedIron.Id)]
+        }
+    };
+
+    True(originalIron.Id != regeneratedIron.Id);
+    var dashboard = AnalyticsDashboardBuilder.Build([regeneratedIron], sessions, regeneratedIron.Id, null, "All");
+    Equal(2, dashboard.IncludedShots.Count);
+    Equal(2, dashboard.SessionRows.Count);
+    Equal(2, dashboard.TrendPoints.Count);
 }
 
 static void CheckGuidedActivityState()
@@ -566,6 +594,35 @@ static void CheckGroundShot()
     True(calculated.TotalYards is > 125 and < 135);
     Equal(0d, calculated.ApexYards!.Value);
     True(calculated.FlightPath is { Count: 2 });
+
+    var fastRunner = BallFlightCalculator.Calculate(ValidShot() with
+    {
+        Club = "5 Hybrid",
+        BallSpeedMph = 120.8,
+        LaunchAngleDeg = -0.4
+    });
+    var slowerRunner = BallFlightCalculator.Calculate(ValidShot() with
+    {
+        Club = "7 Iron",
+        BallSpeedMph = 86.3,
+        LaunchAngleDeg = -1.2
+    });
+    True(fastRunner.TotalYards is > 135 and < 145);
+    True(slowerRunner.TotalYards is > 103 and < 112);
+
+    var lowSkimmer = BallFlightCalculator.Calculate(ValidShot() with
+    {
+        Club = "PW",
+        BallSpeedMph = 74.8,
+        LaunchAngleDeg = 1.6,
+        LaunchDirectionDeg = 7.5,
+        TotalSpinRpm = 5531,
+        SpinAxisDeg = 56.2,
+        BackSpinRpm = 3073,
+        SideSpinRpm = 4599
+    });
+    True(lowSkimmer.CarryYards is > 5 and < 20);
+    True(lowSkimmer.TotalYards is > 45 and < 65);
 }
 
 static ShotData ValidShot() => new(

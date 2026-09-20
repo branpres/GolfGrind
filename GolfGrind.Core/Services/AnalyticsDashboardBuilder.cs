@@ -129,9 +129,7 @@ public static class AnalyticsDashboardBuilder
     }
 
     private static bool Matches(StoredShot shot, GolfClub club, DateTimeOffset? earliestDate, string swingFilter) =>
-        (shot.ClubId == club.Id || (shot.ClubId is null &&
-         (string.Equals(shot.Club, club.DisplayName, StringComparison.OrdinalIgnoreCase) ||
-          string.Equals(shot.Club, club.Name, StringComparison.OrdinalIgnoreCase)))) &&
+        ShotAnalytics.MatchesClub(shot, club) &&
         (earliestDate is not { } earliest || shot.HitAt >= earliest) &&
         (swingFilter == "All" || ShotAnalytics.NormalizeSwing(shot.SwingType) == swingFilter);
 

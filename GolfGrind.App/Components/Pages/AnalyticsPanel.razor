@@ -224,10 +224,23 @@
     protected override void OnParametersSet()
     {
         if (Clubs.All(club => club.Id != selectedClubId))
-            selectedClubId = Clubs.FirstOrDefault(club => club.Kind != GolfClubKind.Putter)?.Id ?? Guid.Empty;
+            selectedClubId = DefaultAnalyticsClubId();
         if (Clubs.FirstOrDefault(club => club.Id == selectedClubId)?.Kind != GolfClubKind.Wedge)
             swingFilter = "All";
         RebuildDashboard();
+    }
+
+    private Guid DefaultAnalyticsClubId()
+    {
+        var performanceShots = ShotAnalytics.PerformanceSessions(Sessions)
+            .SelectMany(session => session.Shots)
+            .Where(shot => !shot.ExcludedFromAnalytics)
+            .Where(shot => EarliestDate is not { } earliest || shot.HitAt >= earliest)
+            .ToList();
+        return Clubs.FirstOrDefault(club => club.Kind != GolfClubKind.Putter &&
+                   performanceShots.Any(shot => ShotAnalytics.MatchesClub(shot, club)))?.Id
+               ?? Clubs.FirstOrDefault(club => club.Kind != GolfClubKind.Putter)?.Id
+               ?? Guid.Empty;
     }
 
     private void AnalyticsClubChanged()

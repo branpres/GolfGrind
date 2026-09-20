@@ -19,7 +19,8 @@ public static class BallFlightCalculator
     private const double TimeStepSeconds = 0.005;
     internal const double RolloutCalibrationScale = 3.0;
     private const double MinimumMeasuredSpinRpm = 100;
-    private const double GroundResistanceCoefficient = 1.02;
+    private const double MinimumGroundResistanceCoefficient = 0.65;
+    private const double MaximumGroundResistanceCoefficient = 1.35;
 
     public static ShotData Calculate(ShotData measured)
     {
@@ -103,7 +104,7 @@ public static class BallFlightCalculator
         // shot increasingly as it finishes farther offline.
         var carryYards = Math.Sqrt(position.X * position.X + position.Y * position.Y) / MetersPerYard;
         var offlineYards = position.X / MetersPerYard;
-        var rolloutYards = EstimateRolloutYards(velocity, totalSpin, carryYards);
+        var rolloutYards = EstimateRolloutYards(velocity, spin.BackSpinRpm, carryYards);
 
         return measured with
         {
@@ -123,8 +124,16 @@ public static class BallFlightCalculator
 
     private static ShotData CalculateGroundShot(ShotData measured, double speed, double azimuth, ResolvedSpin spin)
     {
+        // A fast ground strike sheds proportionally more energy to bouncing,
+        // turf interaction, and aerodynamic drag than a slower runner. The
+        // bounded coefficient keeps extrapolation conservative outside the
+        // measured hybrid/iron range.
+        var resistanceCoefficient = Math.Clamp(
+            0.01145 * measured.BallSpeedMph - 0.216,
+            MinimumGroundResistanceCoefficient,
+            MaximumGroundResistanceCoefficient);
         var totalMeters = speed * speed /
-            (2 * GravityMetersPerSecondSquared * GroundResistanceCoefficient);
+            (2 * GravityMetersPerSecondSquared * resistanceCoefficient);
         var totalYards = totalMeters / MetersPerYard;
         var downRangeYards = totalYards * Math.Cos(azimuth);
         var offlineAtRestYards = totalYards * Math.Sin(azimuth);
@@ -221,19 +230,29 @@ public static class BallFlightCalculator
         return (2400 + number * 450, 10 + number * 1.3);
     }
 
-    private static double EstimateRolloutYards(Vector3 landingVelocity, double spinRpm, double carryYards)
+    private static double EstimateRolloutYards(Vector3 landingVelocity, double backSpinRpm, double carryYards)
     {
         var horizontalSpeed = Math.Sqrt(landingVelocity.X * landingVelocity.X + landingVelocity.Y * landingVelocity.Y);
         var descentAngle = Math.Atan2(Math.Abs(landingVelocity.Z), Math.Max(0.1, horizontalSpeed));
         var landingFactor = Math.Clamp(1 - descentAngle / DegreesToRadians(55), 0.08, 0.85);
-        var spinFactor = Math.Clamp(1 - spinRpm / 10_000d, 0.12, 0.82);
+        // Backspin affects forward rollout; sidespin should not suppress it as
+        // though the entire spin vector were opposing the roll.
+        var spinFactor = Math.Clamp(1 - Math.Abs(backSpinRpm) / 10_000d, 0.12, 0.82);
         var rollMeters = horizontalSpeed * horizontalSpeed / (2 * GravityMetersPerSecondSquared * 1.7)
             * landingFactor * spinFactor * RolloutCalibrationScale;
 
-        // Low-launch shots can run well beyond 18% of carry. The wider ceiling
-        // still leaves landing speed, descent angle, and spin in control of the
-        // estimate while avoiding an artificial cutoff for punch/thin shots.
-        return Math.Clamp(rollMeters / MetersPerYard, 0, Math.Max(3, carryYards * 0.55));
+        // Blend the ceiling continuously from ordinary flight into a skimmer.
+        // A shallow shot can legitimately roll several times farther than it
+        // carries, while normal descending shots retain the conservative cap.
+        var lowFlightBlend = Math.Clamp(
+            (DegreesToRadians(20) - descentAngle) / DegreesToRadians(15),
+            0,
+            1);
+        var maximumRollRatio = 0.55 + (4.0 - 0.55) * lowFlightBlend;
+        return Math.Clamp(
+            rollMeters / MetersPerYard,
+            0,
+            Math.Max(3, carryYards * maximumRollRatio));
     }
 
     private static FlightPoint ToFlightPoint(Vector3 value) => new(

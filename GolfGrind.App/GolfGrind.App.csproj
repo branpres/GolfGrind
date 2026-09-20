@@ -12,8 +12,8 @@
     <WindowsPackageType>None</WindowsPackageType>
     <ApplicationTitle>Golf Grind</ApplicationTitle>
     <ApplicationId>com.local.golfgrind</ApplicationId>
-    <ApplicationDisplayVersion>0.23.2</ApplicationDisplayVersion>
-    <ApplicationVersion>2302</ApplicationVersion>
+    <ApplicationDisplayVersion>0.23.4</ApplicationDisplayVersion>
+    <ApplicationVersion>2304</ApplicationVersion>
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
   </PropertyGroup>

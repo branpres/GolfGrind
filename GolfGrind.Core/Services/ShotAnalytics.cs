@@ -60,11 +60,19 @@ public static class ShotAnalytics
         sessions
             .SelectMany(session => session.Shots)
             .Where(shot => !shot.ExcludedFromAnalytics)
-            .Where(shot => shot.ClubId == club.Id ||
-                (shot.ClubId is null &&
-                 (string.Equals(shot.Club, club.DisplayName, StringComparison.OrdinalIgnoreCase) ||
-                  string.Equals(shot.Club, club.Name, StringComparison.OrdinalIgnoreCase))))
+            .Where(shot => MatchesClub(shot, club))
             .ToList();
+
+    /// <summary>
+    /// Matches the durable ID first, then falls back to the recorded club
+    /// label. The label fallback repairs sessions created before a default bag
+    /// was persisted and also survives removing and re-adding the same club.
+    /// </summary>
+    public static bool MatchesClub(StoredShot shot, GolfClub club) =>
+        shot.ClubId == club.Id ||
+        string.Equals(shot.Club, club.DisplayName, StringComparison.OrdinalIgnoreCase) ||
+        (club.LoftDegrees is null &&
+         string.Equals(shot.Club, club.Name, StringComparison.OrdinalIgnoreCase));
 
     public static IReadOnlyList<StoredShot> DispersionShots(
         GolfClub club,

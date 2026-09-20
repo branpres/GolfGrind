@@ -2,7 +2,7 @@
 
 Windows-first .NET 10 MAUI Blazor Hybrid application for a Square Golf launch monitor.
 
-## Current prototype (recovered v0.23.2)
+## Current prototype (recovered v0.23.4)
 
 This build reconstructs the accepted v0.14–v0.16 work on top of the preserved v0.13 archive.
 
@@ -87,6 +87,22 @@ This build reconstructs the accepted v0.14–v0.16 work on top of the preserved 
 - Storage, backup, profile and launch-monitor implementations remain behind services and interfaces.
 
 This is a prototype build. Session and backup compatibility with earlier builds is intentionally not guaranteed while the data model is still changing.
+
+### v0.23.4 low-flight and ground-roll calibration
+
+- Leaves the validated airborne carry calculation unchanged.
+- Blends rollout smoothly by landing angle so thin shots and low skimmers are no longer limited to 55% of carry.
+- Uses measured or estimated backspin, rather than total spin, to determine forward rollout so sidespin does not incorrectly suppress distance.
+- Adds bounded speed-dependent resistance for fully ground-running shots instead of applying one coefficient to every worm burner.
+- Advances retained calculation metadata to `BallFlightCalculator/4` and adds regression coverage for normal worm burners, faster and slower ground runners, and a low-launch wedge skimmer.
+
+### v0.23.3 analytics club identity correction
+
+- Persists the default golf bag immediately so its club identifiers remain stable across app restarts and build updates.
+- Lets Analytics, Bag Mapping, Wedge Matrix, and recommendation queries fall back to the retained club label when a saved shot contains an older club identifier.
+- Restores existing session analytics without deleting, editing, or re-recording the affected shots.
+- Opens Analytics on the first club that actually has matching performance data instead of defaulting to an empty club.
+- Adds regression coverage for summaries, session comparisons, and trend points spanning regenerated club identifiers.
 
 ### v0.23.2 flight-model calibration
 

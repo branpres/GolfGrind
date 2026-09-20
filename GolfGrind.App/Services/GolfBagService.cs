@@ -17,7 +17,12 @@ public sealed class GolfBagService
                 return validClubs;
         }
 
-        return CreateDefaultBag();
+        // Persist the generated IDs immediately. Otherwise every app restart
+        // creates a new set of club IDs and retained shots no longer match the
+        // visually identical clubs used by analytics and recommendations.
+        var defaultBag = CreateDefaultBag();
+        Save(profileId, defaultBag);
+        return defaultBag;
     }
 
     public void Save(Guid profileId, IEnumerable<GolfClub> clubs)
