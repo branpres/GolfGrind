@@ -2,7 +2,7 @@
 
 Windows-first .NET 10 MAUI Blazor Hybrid application for a Square Golf launch monitor.
 
-## Current prototype (v0.24.2)
+## Current prototype (v0.24.3)
 
 This build reconstructs the accepted v0.14–v0.16 work on top of the preserved v0.13 archive.
 
@@ -87,6 +87,12 @@ This build reconstructs the accepted v0.14–v0.16 work on top of the preserved 
 - Storage, backup, profile and launch-monitor implementations remain behind services and interfaces.
 
 This is a prototype build. Session and backup compatibility with earlier builds is intentionally not guaranteed while the data model is still changing.
+
+### v0.24.3 low-flight regression-check correction
+
+- Corrects the stale protocol-check ceiling that rejected the calibrated 47.5-yard rollout of the established low-flight sample.
+- Tests the intended behavior directly: the sample must clear the former 55%-of-carry rollout cap by a meaningful margin while remaining below a conservative 55-yard sanity ceiling.
+- Leaves the validated `BallFlightCalculator/4` calculation unchanged.
 
 ### v0.24.2 menu placement and demo control
 

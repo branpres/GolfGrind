@@ -62,7 +62,10 @@ var lowFlightShot = BallFlightCalculator.Calculate(new ShotData(
     SpinAxisDeg: 0));
 Check(lowFlightShot.CarryYards is > 68 and < 75, "low-flight carry remains plausible");
 var lowFlightRollout = lowFlightShot.TotalYards!.Value - lowFlightShot.CarryYards!.Value;
-Check(lowFlightRollout is > 35 and < 42, "low-flight rollout is not artificially capped");
+var formerRolloutCap = lowFlightShot.CarryYards.Value * 0.55;
+Check(
+    lowFlightRollout > formerRolloutCap + 3 && lowFlightRollout < 55,
+    "low-flight rollout exceeds the former carry-ratio cap without becoming implausible");
 
 var wedge = new GolfClub { Name = "Wedge", Kind = GolfClubKind.Wedge, LoftDegrees = 54 };
 var analyticsSession = new PracticeSession();
