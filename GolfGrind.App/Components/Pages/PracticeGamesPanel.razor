@@ -1,26 +1,26 @@
 @using GolfGrind.Core.Models
 
-<ActivityWorkspace LastShot="LastShot">
-    <section class="card practice-card mode-control-card">
-        <div class="section-heading">
-            <div>
-                <h2>Practice</h2>
-                <span class="muted">Seven focused modes share one results system. Every shot keeps the exact mode and settings used.</span>
-            </div>
-        </div>
-
-        <div class="practice-game-grid">
-            @foreach (var game in PracticeGameNames.SelectableGames)
-            {
-                <button class="practice-game-choice @(State.Game == game ? "active" : "")" disabled="@State.IsActive" @onclick="() => SelectGame.InvokeAsync(game)">
-                    <strong>@game.DisplayName()</strong>
-                    <span>@Description(game)</span>
-                </button>
-            }
-        </div>
-
+<ActivityWorkspace LastShot="LastShot" Active="State.IsActive">
+    <section class="card practice-card mode-control-card @(State.IsActive ? "active-mode-card" : "")">
         @if (!State.IsActive)
         {
+            <div class="section-heading">
+                <div>
+                    <h2>Choose a practice mode</h2>
+                    <span class="muted">Select a challenge, configure it, then the workspace will simplify around the live session.</span>
+                </div>
+            </div>
+
+            <div class="practice-game-grid">
+                @foreach (var game in PracticeGameNames.SelectableGames)
+                {
+                    <button class="practice-game-choice @(State.Game == game ? "active" : "")" @onclick="() => SelectGame.InvokeAsync(game)">
+                        <strong>@game.DisplayName()</strong>
+                        <span>@Description(game)</span>
+                    </button>
+                }
+            </div>
+
             <PracticeSetupPanel Game="State.Game" Options="Options" Clubs="Clubs" PersonalBest="PersonalBest" />
             <button class="primary start-practice" @onclick="StartGame">Start @State.Game.DisplayName()</button>
         }
@@ -29,7 +29,7 @@
             <PracticeLivePanel State="State" EndGame="EndGame" />
         }
 
-        @if (State.Game == PracticeGameKind.FairwayFinder)
+        @if (State.IsActive && State.Game == PracticeGameKind.FairwayFinder)
         {
             <FairwayPattern State="State" />
         }

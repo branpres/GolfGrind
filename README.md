@@ -2,7 +2,7 @@
 
 Windows-first .NET 10 MAUI Blazor Hybrid application for a Square Golf launch monitor.
 
-## Current prototype (recovered v0.23.4)
+## Current prototype (v0.24.0)
 
 This build reconstructs the accepted v0.14–v0.16 work on top of the preserved v0.13 archive.
 
@@ -87,6 +87,16 @@ This build reconstructs the accepted v0.14–v0.16 work on top of the preserved 
 - Storage, backup, profile and launch-monitor implementations remain behind services and interfaces.
 
 This is a prototype build. Session and backup compatibility with earlier builds is intentionally not guaranteed while the data model is still changing.
+
+### v0.24.0 mode-focused projector workspace
+
+- Replaces the permanently expanded navigation and toolbar with a compact header showing the active workspace, connection/readiness state, battery, club used, and essential connection controls.
+- Moves workspace navigation behind a large on-demand Menu and secondary application controls behind Settings.
+- Gives Range, Practice, Bag Mapping, and Wedge Matrix substantially more space for their tracer and mode-specific information.
+- Separates setup and active states so configuration choices disappear once a guided activity begins, leaving its target, progress, score, result, and stop action prominent.
+- Collapses the Range session shot table until requested and moves the Wedge Matrix results table to a full-width surface.
+- Raises the base typography, secondary-text contrast, measurement sizes, table text, and tracer yardage labels for projector readability.
+- Uses wider desktop layouts while retaining responsive stacked layouts on smaller windows.
 
 ### v0.23.4 low-flight and ground-roll calibration
 

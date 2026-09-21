@@ -1,33 +1,29 @@
-<ActivityWorkspace LastShot="LastShot">
-    <section class="card mapping-guide mode-control-card">
-        <div class="section-heading">
-            <div>
-                <h2>Guided bag mapping</h2>
-                <span class="muted">Choose clubs and let the app advance after the selected number of retained shots.</span>
+<ActivityWorkspace LastShot="LastShot" Active="GuideActive">
+    <section class="card mapping-guide mode-control-card @(GuideActive ? "active-mode-card" : "")">
+        @if (!GuideActive)
+        {
+            <div class="section-heading">
+                <div>
+                    <h2>Set up bag mapping</h2>
+                    <span class="muted">Choose clubs and let the app advance after the selected number of retained shots.</span>
+                </div>
             </div>
-        </div>
-        <div class="selection-actions">
-            <button @onclick="SelectAll" disabled="@GuideActive">Select all</button>
-            <button @onclick="DeselectAll" disabled="@GuideActive">Deselect all</button>
-            <span class="muted">@SelectedClubIds.Count selected</span>
-        </div>
-        <div class="club-checklist">
-            @foreach (var club in Clubs.Where(club => club.Kind != GolfClubKind.Putter))
-            {
-                <label><input type="checkbox" checked="@SelectedClubIds.Contains(club.Id)" disabled="@GuideActive" @onchange="args => ToggleClub.InvokeAsync(new BagClubToggle(club.Id, args.Value is true))" /> @club.DisplayName</label>
-            }
-        </div>
-        <div class="practice-setup">
-            <label><span>Shots per club</span><input type="number" min="1" max="30" disabled="@GuideActive" value="@ShotsPerClub" @onchange="ChangeShotsPerClub" /></label>
-            @if (!GuideActive)
-            {
+            <div class="selection-actions">
+                <button @onclick="SelectAll">Select all</button>
+                <button @onclick="DeselectAll">Deselect all</button>
+                <span class="muted">@SelectedClubIds.Count selected</span>
+            </div>
+            <div class="club-checklist">
+                @foreach (var club in Clubs.Where(club => club.Kind != GolfClubKind.Putter))
+                {
+                    <label><input type="checkbox" checked="@SelectedClubIds.Contains(club.Id)" @onchange="args => ToggleClub.InvokeAsync(new BagClubToggle(club.Id, args.Value is true))" /> @club.DisplayName</label>
+                }
+            </div>
+            <div class="practice-setup">
+                <label><span>Shots per club</span><input type="number" min="1" max="30" value="@ShotsPerClub" @onchange="ChangeShotsPerClub" /></label>
                 <button class="primary" @onclick="StartGuide">Start bag mapping</button>
-            }
-            else
-            {
-                <button class="danger" @onclick="StopGuide">Stop mapping</button>
-            }
-        </div>
+            </div>
+        }
         @if (GuideActive)
         {
             <div class="practice-prompt mapping-prompt">
@@ -35,6 +31,7 @@
                 <strong>@GuidePrompt</strong>
                 <span>@(ShotInClub + 1) of @ShotsPerClub accepted shots</span>
             </div>
+            <div class="practice-action-row"><button class="danger" @onclick="StopGuide">Stop mapping</button></div>
         }
         @if (!string.IsNullOrWhiteSpace(Message))
         {

@@ -28,20 +28,28 @@
             KeepScreenAwakeChanged="SetKeepScreenAwake"
             AudibleReadyNotification="audibleReadyNotification"
             AudibleReadyNotificationChanged="SetAudibleReadyNotification"
+            MenuOpen="appMenuOpen"
+            MenuRequested="ToggleAppMenu"
             NewSession="StartNewSession"
             ToggleConnection="ToggleConnectionAsync"
             SimulateShot="SimulateShot" />
 
-<AppNavigation Views="AppViews" ActiveView="@activeView" ViewSelected="SelectViewAsync" />
+@if (appMenuOpen)
+{
+    <AppNavigation Views="AppViews" ActiveView="@activeView" ViewSelected="SelectViewAsync" />
+}
 
-<section class="reliability-strip" aria-label="Launch monitor reliability status">
-    <span><strong>@status.ConnectionState</strong> · @status.Message</span>
-    <span>Accepted @acceptedShotCount · Rejected @rejectedShotCount · Duplicates @duplicateShotCount</span>
-    @if (!string.IsNullOrWhiteSpace(shotDiagnosticMessage))
-    {
-        <span>@shotDiagnosticMessage</span>
-    }
-</section>
+@if (rejectedShotCount > 0 || duplicateShotCount > 0 || !string.IsNullOrWhiteSpace(shotDiagnosticMessage))
+{
+    <section class="reliability-strip" aria-label="Launch monitor reliability status">
+        <span><strong>@status.ConnectionState</strong> · @status.Message</span>
+        <span>Accepted @acceptedShotCount · Rejected @rejectedShotCount · Duplicates @duplicateShotCount</span>
+        @if (!string.IsNullOrWhiteSpace(shotDiagnosticMessage))
+        {
+            <span>@shotDiagnosticMessage</span>
+        }
+    </section>
+}
 
 @if (activeView == "Golfers")
 {

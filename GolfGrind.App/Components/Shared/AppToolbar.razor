@@ -1,45 +1,61 @@
 @inject IJSRuntime JS
 
-<section class="toolbar card">
-    <div class="status-area">
-        <span class="status-dot @(Status.IsConnected ? "online" : "")"></span>
-        <strong>@Status.Message</strong>
-        @if (Status.BatteryPercent is not null)
-        {
-            <span class="muted">Battery @Status.BatteryPercent%</span>
-        }
-        @if (Status.IsBallReady)
-        {
-            <span class="ready">Ball ready</span>
-        }
+<header class="mode-header card">
+    <div class="mode-identity">
+        <strong>Golf Grind</strong>
+        <span>@ActiveView</span>
     </div>
-    <div class="actions">
-        <select aria-label="Golfer profile" title="Active golfer" value="@SelectedProfileId" @onchange="ProfileChanged" disabled="@ProfileChangeDisabled">
-            @foreach (var profile in Profiles)
-            {
-                <option value="@profile.Id">@profile.Name</option>
-            }
-        </select>
-        <select aria-label="Launch monitor source" value="@MonitorMode" @onchange="MonitorChanged" disabled="@IsConnected">
-            <option value="square">Square Bluetooth</option>
-            <option value="mock">Demo mode</option>
-        </select>
-        @if (ActiveView != "Wedge Matrix")
-        {
-            <select aria-label="Club" value="@SelectedClubId" @onchange="ClubChanged" disabled="@BagGuideActive">
+    <div class="mode-connection" aria-label="Launch monitor status">
+        <span class="status-dot @(Status.IsConnected ? "online" : "")"></span>
+        <div>
+            <strong>@(Status.IsBallReady ? "Ball ready" : Status.Message)</strong>
+            <span>@ConnectionDetail</span>
+        </div>
+    </div>
+    @if (ShowsClubSelector)
+    {
+        <label class="mode-club-selector">
+            <span>Club used</span>
+            <select aria-label="Club used" value="@SelectedClubId" @onchange="ClubChanged" disabled="@BagGuideActive">
                 @foreach (var club in Clubs)
                 {
                     <option value="@club.Id">@club.DisplayName</option>
                 }
             </select>
-        }
+        </label>
+    }
+    <div class="mode-header-actions">
+        <button class="@(IsConnected ? "" : "primary")" @onclick="ToggleConnection">@(IsConnected ? "Disconnect" : "Connect")</button>
+        <button @onclick="ToggleSettings" aria-expanded="@settingsOpen">Settings</button>
+        <button class="menu-button @(MenuOpen ? "primary" : "")" @onclick="MenuRequested" aria-expanded="@MenuOpen">Menu</button>
+    </div>
+</header>
+
+@if (settingsOpen)
+{
+    <section class="mode-settings card" aria-label="Golf Grind settings">
+        <label>
+            <span>Golfer</span>
+            <select aria-label="Golfer profile" value="@SelectedProfileId" @onchange="ProfileChanged" disabled="@ProfileChangeDisabled">
+                @foreach (var profile in Profiles)
+                {
+                    <option value="@profile.Id">@profile.Name</option>
+                }
+            </select>
+        </label>
+        <label>
+            <span>Launch monitor</span>
+            <select aria-label="Launch monitor source" value="@MonitorMode" @onchange="MonitorChanged" disabled="@IsConnected">
+                <option value="square">Square Bluetooth</option>
+                <option value="mock">Demo mode</option>
+            </select>
+        </label>
         <button @onclick="NewSession" disabled="@ProfileChangeDisabled">New session</button>
-        <button class="primary" @onclick="ToggleConnection">@(IsConnected ? "Disconnect" : "Connect")</button>
-        <label class="screen-awake-toggle" title="Prevent the display and screensaver from activating while the launch monitor is connected">
+        <label class="screen-awake-toggle">
             <input type="checkbox" checked="@KeepScreenAwake" @onchange="ScreenAwakeChanged" />
             <span>Keep screen awake</span>
         </label>
-        <label class="screen-awake-toggle" title="Play one short chime when the monitor confirms that the ball is ready">
+        <label class="screen-awake-toggle">
             <input type="checkbox" checked="@AudibleReadyNotification" @onchange="AudibleReadyNotificationChangedInternal" />
             <span>Ready chime</span>
         </label>
@@ -47,8 +63,8 @@
         {
             <button @onclick="SimulateShot" disabled="@(!MockConnected)">Simulate shot</button>
         }
-    </div>
-</section>
+    </section>
+}
 
 @code {
     [Parameter, EditorRequired] public LaunchMonitorStatus Status { get; set; } = new(false, false, null, "Disconnected");
@@ -64,17 +80,26 @@
     [Parameter] public bool MockConnected { get; set; }
     [Parameter] public bool KeepScreenAwake { get; set; }
     [Parameter] public bool AudibleReadyNotification { get; set; }
+    [Parameter] public bool MenuOpen { get; set; }
     [Parameter] public EventCallback<Guid> SelectedProfileIdChanged { get; set; }
     [Parameter] public EventCallback<Guid> SelectedClubIdChanged { get; set; }
     [Parameter] public EventCallback<string> MonitorModeChanged { get; set; }
     [Parameter] public EventCallback<bool> KeepScreenAwakeChanged { get; set; }
     [Parameter] public EventCallback<bool> AudibleReadyNotificationChanged { get; set; }
+    [Parameter] public EventCallback MenuRequested { get; set; }
     [Parameter] public EventCallback NewSession { get; set; }
     [Parameter] public EventCallback ToggleConnection { get; set; }
     [Parameter] public EventCallback SimulateShot { get; set; }
 
     private bool previousBallReady;
     private bool readyChimePending;
+    private bool settingsOpen;
+    private bool ShowsClubSelector => ActiveView is "Range" or "Practice" or "Bag Mapping";
+    private string ConnectionDetail => Status.BatteryPercent is { } battery
+        ? $"{Status.ConnectionState} · {battery}% battery"
+        : Status.ConnectionState.ToString();
+
+    private void ToggleSettings() => settingsOpen = !settingsOpen;
 
     private Task ProfileChanged(ChangeEventArgs args) =>
         Guid.TryParse(args.Value?.ToString(), out var id) ? SelectedProfileIdChanged.InvokeAsync(id) : Task.CompletedTask;

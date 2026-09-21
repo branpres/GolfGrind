@@ -35,20 +35,22 @@
     </section>
 </div>
 
-<section class="card history-card">
-    <div class="section-heading">
+<details class="card history-card range-history">
+    <summary class="section-heading">
         <div>
             <h2>Range session</h2>
             <span class="muted">Started @Session.StartedAt.LocalDateTime.ToString("MMM d, h:mm tt")</span>
         </div>
-        <span class="muted">@Session.Shots.Count shots · saved automatically</span>
+        <span class="range-history-count">@Session.Shots.Count shots <span class="range-history-action">View session</span></span>
+    </summary>
+    <div class="range-history-body">
+        <ShotHistoryTable Session="Session"
+                          IsPotentialOutlier="IsPotentialOutlier"
+                          IsDeletePending="IsDeletePending"
+                          ToggleExclusion="ToggleExclusion"
+                          DeleteShot="DeleteShot" />
     </div>
-    <ShotHistoryTable Session="Session"
-                      IsPotentialOutlier="IsPotentialOutlier"
-                      IsDeletePending="IsDeletePending"
-                      ToggleExclusion="ToggleExclusion"
-                      DeleteShot="DeleteShot" />
-</section>
+</details>
 
 @code {
     [Parameter] public string MonitorMode { get; set; } = "square";

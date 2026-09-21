@@ -1,4 +1,8 @@
-<nav class="card app-nav" aria-label="Application sections">
+<nav class="card app-nav mode-menu" aria-label="Application sections">
+    <div class="mode-menu-heading">
+        <strong>Choose a workspace</strong>
+        <span>Selecting a workspace closes this menu.</span>
+    </div>
     @foreach (var view in Views)
     {
         <button class="@(ActiveView == view ? "active" : "")" @onclick="() => ViewSelected.InvokeAsync(view)">@view</button>

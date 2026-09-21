@@ -1,9 +1,10 @@
-<div class="mode-workspace">
+<div class="mode-workspace @(Active ? "active-workspace" : "setup-workspace")">
     <RangeGraphic LastShot="LastShot" />
-    @ChildContent
+    <div class="mode-specific-panel">@ChildContent</div>
 </div>
 
 @code {
     [Parameter] public ShotData? LastShot { get; set; }
+    [Parameter] public bool Active { get; set; }
     [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
 }

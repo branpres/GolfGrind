@@ -13,6 +13,7 @@ public partial class Home
     private List<GolfClub> clubs = [];
     private List<GolferProfile> profiles = [];
     private string activeView = "Range";
+    private bool appMenuOpen;
     private Guid selectedClubId;
     private Guid selectedProfileId;
     private Guid loadedProfileId;
@@ -153,6 +154,7 @@ public partial class Home
 
     private Task ClubChangedAsync() => MonitorWorkspace.SelectClubAsync(SelectedClub?.DisplayName ?? "7 Iron");
     private void SimulateShot() => MonitorWorkspace.SimulateShot();
+    private void ToggleAppMenu() => appMenuOpen = !appMenuOpen;
     private async Task SelectViewAsync(string view)
     {
         if (view != "Wedge Matrix" && wedgeGuide.IsActive)
@@ -162,6 +164,7 @@ public partial class Home
         if (view != "Practice" && practiceGameState.IsActive)
             EndPracticeGame();
         activeView = view;
+        appMenuOpen = false;
         EnsureSessionForCurrentActivity();
         if (view == "Wedge Matrix" && SelectedClub?.Kind != GolfClubKind.Wedge && WedgeClubs.FirstOrDefault() is { } wedge)
         {
