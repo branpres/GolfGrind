@@ -9,11 +9,11 @@ namespace GolfGrind.App.Components.Pages;
 
 public partial class Home
 {
-    private static readonly string[] AppViews = ["Range", "Practice", "Bag Mapping", "Wedge Matrix", "Analytics", "Golf Bag", "Sessions", "Golfers"];
     private List<GolfClub> clubs = [];
     private List<GolferProfile> profiles = [];
     private string activeView = "Range";
     private bool appMenuOpen;
+    private bool appSettingsOpen;
     private Guid selectedClubId;
     private Guid selectedProfileId;
     private Guid loadedProfileId;
@@ -54,6 +54,9 @@ public partial class Home
     private ShotData? lastShot => ActivitySessions.LastShot;
     private bool ProfileChangeDisabled => practiceGameState.IsActive || bagGuide.IsActive || wedgeGuide.IsActive;
     private string ActiveProfileName => profiles.FirstOrDefault(profile => profile.Id == selectedProfileId)?.Name ?? "Golfer";
+    private string ActiveModeLabel => activeView == "Practice"
+        ? $"Practice · {practiceGameState.Game.DisplayName()}"
+        : activeView;
     private ILaunchMonitor ActiveMonitor => MonitorWorkspace.ActiveMonitor;
     private GolfClub? SelectedClub => clubs.FirstOrDefault(club => club.Id == selectedClubId);
     private GolfClub? SelectedAnalyticsClub => clubs.FirstOrDefault(club => club.Id == analyticsClubId);
@@ -154,7 +157,19 @@ public partial class Home
 
     private Task ClubChangedAsync() => MonitorWorkspace.SelectClubAsync(SelectedClub?.DisplayName ?? "7 Iron");
     private void SimulateShot() => MonitorWorkspace.SimulateShot();
-    private void ToggleAppMenu() => appMenuOpen = !appMenuOpen;
+    private void ToggleAppMenu()
+    {
+        appMenuOpen = !appMenuOpen;
+        if (appMenuOpen)
+            appSettingsOpen = false;
+    }
+    private void CloseAppMenu() => appMenuOpen = false;
+    private void OpenAppSettings()
+    {
+        appMenuOpen = false;
+        appSettingsOpen = true;
+    }
+    private void CloseAppSettings() => appSettingsOpen = false;
     private async Task SelectViewAsync(string view)
     {
         if (view != "Wedge Matrix" && wedgeGuide.IsActive)
@@ -165,6 +180,7 @@ public partial class Home
             EndPracticeGame();
         activeView = view;
         appMenuOpen = false;
+        appSettingsOpen = false;
         EnsureSessionForCurrentActivity();
         if (view == "Wedge Matrix" && SelectedClub?.Kind != GolfClubKind.Wedge && WedgeClubs.FirstOrDefault() is { } wedge)
         {

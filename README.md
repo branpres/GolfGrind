@@ -2,7 +2,7 @@
 
 Windows-first .NET 10 MAUI Blazor Hybrid application for a Square Golf launch monitor.
 
-## Current prototype (v0.24.0)
+## Current prototype (v0.24.2)
 
 This build reconstructs the accepted v0.14–v0.16 work on top of the preserved v0.13 archive.
 
@@ -87,6 +87,21 @@ This build reconstructs the accepted v0.14–v0.16 work on top of the preserved 
 - Storage, backup, profile and launch-monitor implementations remain behind services and interfaces.
 
 This is a prototype build. Session and backup compatibility with earlier builds is intentionally not guaranteed while the data model is still changing.
+
+### v0.24.2 menu placement and demo control
+
+- Opens the navigation drawer from the right edge beside the Menu button.
+- Moves Demo mode's Simulate shot action into the persistent header so it remains visible while Settings is closed.
+- Keeps Simulate shot disabled until the mock monitor is connected.
+
+### v0.24.1 navigation refinement
+
+- Replaces the full-width workspace picker with a left-side menu drawer that leaves the current screen visible behind it.
+- Groups destinations into Practice, Review, and Manage sections with large projector-friendly rows and a clear current-mode highlight.
+- Removes the software-oriented “workspace” language and unnecessary menu instructions.
+- Moves secondary golfer, monitor, session, display, and ready-chime settings into the bottom of the menu.
+- Shows the selected Practice mode in the compact header, such as `Practice · Distance Ladder`.
+- Supports closing the drawer with its close button or by clicking the dimmed screen behind it.
 
 ### v0.24.0 mode-focused projector workspace
 

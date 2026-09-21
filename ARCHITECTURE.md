@@ -9,7 +9,7 @@
 
 ## UI composition
 
-`Home.razor` composes the compact mode header, on-demand workspace navigation and current page component. Its partials connect UI events to focused Core rules and App services rather than owning device, session-lifecycle or guided-progression logic. Range, Practice, Bag Mapping, Wedge Matrix, Analytics, Golf Bag, Sessions and Golfers own their screen markup in dedicated components. Practice mode setup, live scoring and Fairway Finder plotting are separate components; shared components provide range inputs, the setup/live activity workspace, tracer and shot-history table.
+`Home.razor` composes the compact mode header, grouped navigation drawer, secondary settings panel and current page component. Its partials connect UI events to focused Core rules and App services rather than owning device, session-lifecycle or guided-progression logic. Range, Practice, Bag Mapping, Wedge Matrix, Analytics, Golf Bag, Sessions and Golfers own their screen markup in dedicated components. Practice mode setup, live scoring and Fairway Finder plotting are separate components; shared components provide range inputs, the setup/live activity workspace, tracer and shot-history table.
 
 ## Shot pipeline
 
@@ -24,6 +24,6 @@
 
 All internal state is rooted at `%LOCALAPPDATA%\GolfGrind`. `profiles.json` stores golfer identities, `settings.json` stores application and remembered-device settings, and each `profiles\<id>` directory contains `bag.json` plus individual session files. These stores use atomic validated writes and last-known-good recovery. User-requested exports and packet diagnostics remain in `Documents\Golf Grind`.
 
-Backward compatibility is not a v0.24.0 requirement. This build does not migrate data from MAUI's previous application-ID-based files or preferences. Practice modes and their snapshots may change without migrations while the prototype is being refined. A damaged JSON file is still quarantined, and its last-known-good copy is restored when available.
+Backward compatibility is not a v0.24.2 requirement. This build does not migrate data from MAUI's previous application-ID-based files or preferences. Practice modes and their snapshots may change without migrations while the prototype is being refined. A damaged JSON file is still quarantined, and its last-known-good copy is restored when available.
 
 v0.16 preserves the active in-memory activity during a Bluetooth reconnect. Persisted checkpoint/resume after closing the app or restarting Windows remains future work.

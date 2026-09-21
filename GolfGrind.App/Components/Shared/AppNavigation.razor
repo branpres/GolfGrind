@@ -1,16 +1,63 @@
-<nav class="card app-nav mode-menu" aria-label="Application sections">
-    <div class="mode-menu-heading">
-        <strong>Choose a workspace</strong>
-        <span>Selecting a workspace closes this menu.</span>
-    </div>
-    @foreach (var view in Views)
-    {
-        <button class="@(ActiveView == view ? "active" : "")" @onclick="() => ViewSelected.InvokeAsync(view)">@view</button>
-    }
-</nav>
+<div class="menu-backdrop" @onclick="CloseRequested">
+    <aside class="mode-drawer" aria-label="Golf Grind menu" @onclick:stopPropagation="true">
+        <header class="mode-drawer-header">
+            <div><strong>Golf Grind</strong><span>Menu</span></div>
+            <button type="button" class="drawer-close" aria-label="Close menu" @onclick="CloseRequested">×</button>
+        </header>
+
+        @foreach (var group in Groups)
+        {
+            <section class="drawer-group" aria-label="@group.Name">
+                <h2>@group.Name</h2>
+                @foreach (var view in group.Views)
+                {
+                    <button type="button"
+                            class="drawer-item @(ActiveView == view ? "active" : "")"
+                            aria-current="@(ActiveView == view ? "page" : null)"
+                            @onclick="() => ViewSelected.InvokeAsync(view)">
+                        <span class="drawer-icon" aria-hidden="true">@Icon(view)</span>
+                        <span>@view</span>
+                        @if (ActiveView == view)
+                        {
+                            <span class="drawer-current">Current</span>
+                        }
+                    </button>
+                }
+            </section>
+        }
+
+        <div class="drawer-footer">
+            <button type="button" class="drawer-item" @onclick="SettingsRequested">
+                <span class="drawer-icon" aria-hidden="true">⚙</span>
+                <span>Settings</span>
+            </button>
+        </div>
+    </aside>
+</div>
 
 @code {
-    [Parameter, EditorRequired] public IReadOnlyList<string> Views { get; set; } = [];
+    private static readonly (string Name, string[] Views)[] Groups =
+    [
+        ("Practice", ["Range", "Practice", "Bag Mapping", "Wedge Matrix"]),
+        ("Review", ["Analytics", "Sessions"]),
+        ("Manage", ["Golf Bag", "Golfers"])
+    ];
+
     [Parameter, EditorRequired] public string ActiveView { get; set; } = "Range";
     [Parameter] public EventCallback<string> ViewSelected { get; set; }
+    [Parameter] public EventCallback CloseRequested { get; set; }
+    [Parameter] public EventCallback SettingsRequested { get; set; }
+
+    private static string Icon(string view) => view switch
+    {
+        "Range" => "◎",
+        "Practice" => "⚑",
+        "Bag Mapping" => "≋",
+        "Wedge Matrix" => "▦",
+        "Analytics" => "↗",
+        "Sessions" => "☷",
+        "Golf Bag" => "◇",
+        "Golfers" => "●",
+        _ => "•"
+    };
 }

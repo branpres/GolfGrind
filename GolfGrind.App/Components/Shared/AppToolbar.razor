@@ -3,7 +3,7 @@
 <header class="mode-header card">
     <div class="mode-identity">
         <strong>Golf Grind</strong>
-        <span>@ActiveView</span>
+        <span>@ModeLabel</span>
     </div>
     <div class="mode-connection" aria-label="Launch monitor status">
         <span class="status-dot @(Status.IsConnected ? "online" : "")"></span>
@@ -26,95 +26,40 @@
     }
     <div class="mode-header-actions">
         <button class="@(IsConnected ? "" : "primary")" @onclick="ToggleConnection">@(IsConnected ? "Disconnect" : "Connect")</button>
-        <button @onclick="ToggleSettings" aria-expanded="@settingsOpen">Settings</button>
-        <button class="menu-button @(MenuOpen ? "primary" : "")" @onclick="MenuRequested" aria-expanded="@MenuOpen">Menu</button>
+        @if (MonitorMode == "mock")
+        {
+            <button class="simulate-shot-button" @onclick="SimulateShot" disabled="@(!MockConnected)">Simulate shot</button>
+        }
+        <button class="menu-button @(MenuOpen ? "primary" : "")" @onclick="MenuRequested" aria-expanded="@MenuOpen"><span aria-hidden="true">☰</span> Menu</button>
     </div>
 </header>
 
-@if (settingsOpen)
-{
-    <section class="mode-settings card" aria-label="Golf Grind settings">
-        <label>
-            <span>Golfer</span>
-            <select aria-label="Golfer profile" value="@SelectedProfileId" @onchange="ProfileChanged" disabled="@ProfileChangeDisabled">
-                @foreach (var profile in Profiles)
-                {
-                    <option value="@profile.Id">@profile.Name</option>
-                }
-            </select>
-        </label>
-        <label>
-            <span>Launch monitor</span>
-            <select aria-label="Launch monitor source" value="@MonitorMode" @onchange="MonitorChanged" disabled="@IsConnected">
-                <option value="square">Square Bluetooth</option>
-                <option value="mock">Demo mode</option>
-            </select>
-        </label>
-        <button @onclick="NewSession" disabled="@ProfileChangeDisabled">New session</button>
-        <label class="screen-awake-toggle">
-            <input type="checkbox" checked="@KeepScreenAwake" @onchange="ScreenAwakeChanged" />
-            <span>Keep screen awake</span>
-        </label>
-        <label class="screen-awake-toggle">
-            <input type="checkbox" checked="@AudibleReadyNotification" @onchange="AudibleReadyNotificationChangedInternal" />
-            <span>Ready chime</span>
-        </label>
-        @if (MonitorMode == "mock")
-        {
-            <button @onclick="SimulateShot" disabled="@(!MockConnected)">Simulate shot</button>
-        }
-    </section>
-}
-
 @code {
     [Parameter, EditorRequired] public LaunchMonitorStatus Status { get; set; } = new(false, false, null, "Disconnected");
-    [Parameter, EditorRequired] public IReadOnlyList<GolferProfile> Profiles { get; set; } = [];
     [Parameter, EditorRequired] public IReadOnlyList<GolfClub> Clubs { get; set; } = [];
-    [Parameter] public Guid SelectedProfileId { get; set; }
     [Parameter] public Guid SelectedClubId { get; set; }
-    [Parameter] public string MonitorMode { get; set; } = "square";
     [Parameter] public string ActiveView { get; set; } = "Range";
-    [Parameter] public bool ProfileChangeDisabled { get; set; }
+    [Parameter] public string ModeLabel { get; set; } = "Range";
+    [Parameter] public string MonitorMode { get; set; } = "square";
     [Parameter] public bool BagGuideActive { get; set; }
     [Parameter] public bool IsConnected { get; set; }
     [Parameter] public bool MockConnected { get; set; }
-    [Parameter] public bool KeepScreenAwake { get; set; }
     [Parameter] public bool AudibleReadyNotification { get; set; }
     [Parameter] public bool MenuOpen { get; set; }
-    [Parameter] public EventCallback<Guid> SelectedProfileIdChanged { get; set; }
     [Parameter] public EventCallback<Guid> SelectedClubIdChanged { get; set; }
-    [Parameter] public EventCallback<string> MonitorModeChanged { get; set; }
-    [Parameter] public EventCallback<bool> KeepScreenAwakeChanged { get; set; }
-    [Parameter] public EventCallback<bool> AudibleReadyNotificationChanged { get; set; }
     [Parameter] public EventCallback MenuRequested { get; set; }
-    [Parameter] public EventCallback NewSession { get; set; }
     [Parameter] public EventCallback ToggleConnection { get; set; }
     [Parameter] public EventCallback SimulateShot { get; set; }
 
     private bool previousBallReady;
     private bool readyChimePending;
-    private bool settingsOpen;
     private bool ShowsClubSelector => ActiveView is "Range" or "Practice" or "Bag Mapping";
     private string ConnectionDetail => Status.BatteryPercent is { } battery
         ? $"{Status.ConnectionState} · {battery}% battery"
         : Status.ConnectionState.ToString();
 
-    private void ToggleSettings() => settingsOpen = !settingsOpen;
-
-    private Task ProfileChanged(ChangeEventArgs args) =>
-        Guid.TryParse(args.Value?.ToString(), out var id) ? SelectedProfileIdChanged.InvokeAsync(id) : Task.CompletedTask;
-
     private Task ClubChanged(ChangeEventArgs args) =>
         Guid.TryParse(args.Value?.ToString(), out var id) ? SelectedClubIdChanged.InvokeAsync(id) : Task.CompletedTask;
-
-    private Task MonitorChanged(ChangeEventArgs args) =>
-        MonitorModeChanged.InvokeAsync(args.Value?.ToString() ?? "square");
-
-    private Task ScreenAwakeChanged(ChangeEventArgs args) =>
-        KeepScreenAwakeChanged.InvokeAsync(args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase));
-
-    private Task AudibleReadyNotificationChangedInternal(ChangeEventArgs args) =>
-        AudibleReadyNotificationChanged.InvokeAsync(args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase));
 
     protected override void OnParametersSet()
     {

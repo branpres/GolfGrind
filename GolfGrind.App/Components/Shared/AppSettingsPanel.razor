@@ -1,0 +1,59 @@
+<section class="mode-settings card" aria-label="Golf Grind settings">
+    <div class="mode-settings-heading">
+        <div><strong>Settings</strong><span>Golfer, monitor, and session controls</span></div>
+        <button type="button" aria-label="Close settings" @onclick="CloseRequested">×</button>
+    </div>
+    <label>
+        <span>Golfer</span>
+        <select aria-label="Golfer profile" value="@SelectedProfileId" @onchange="ProfileChanged" disabled="@ProfileChangeDisabled">
+            @foreach (var profile in Profiles)
+            {
+                <option value="@profile.Id">@profile.Name</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Launch monitor</span>
+        <select aria-label="Launch monitor source" value="@MonitorMode" @onchange="MonitorChanged" disabled="@IsConnected">
+            <option value="square">Square Bluetooth</option>
+            <option value="mock">Demo mode</option>
+        </select>
+    </label>
+    <button @onclick="NewSession" disabled="@ProfileChangeDisabled">New session</button>
+    <label class="screen-awake-toggle">
+        <input type="checkbox" checked="@KeepScreenAwake" @onchange="ScreenAwakeChanged" />
+        <span>Keep screen awake</span>
+    </label>
+    <label class="screen-awake-toggle">
+        <input type="checkbox" checked="@AudibleReadyNotification" @onchange="AudibleReadyNotificationChangedInternal" />
+        <span>Ready chime</span>
+    </label>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<GolferProfile> Profiles { get; set; } = [];
+    [Parameter] public Guid SelectedProfileId { get; set; }
+    [Parameter] public string MonitorMode { get; set; } = "square";
+    [Parameter] public bool ProfileChangeDisabled { get; set; }
+    [Parameter] public bool IsConnected { get; set; }
+    [Parameter] public bool KeepScreenAwake { get; set; }
+    [Parameter] public bool AudibleReadyNotification { get; set; }
+    [Parameter] public EventCallback<Guid> SelectedProfileIdChanged { get; set; }
+    [Parameter] public EventCallback<string> MonitorModeChanged { get; set; }
+    [Parameter] public EventCallback<bool> KeepScreenAwakeChanged { get; set; }
+    [Parameter] public EventCallback<bool> AudibleReadyNotificationChanged { get; set; }
+    [Parameter] public EventCallback NewSession { get; set; }
+    [Parameter] public EventCallback CloseRequested { get; set; }
+
+    private Task ProfileChanged(ChangeEventArgs args) =>
+        Guid.TryParse(args.Value?.ToString(), out var id) ? SelectedProfileIdChanged.InvokeAsync(id) : Task.CompletedTask;
+
+    private Task MonitorChanged(ChangeEventArgs args) =>
+        MonitorModeChanged.InvokeAsync(args.Value?.ToString() ?? "square");
+
+    private Task ScreenAwakeChanged(ChangeEventArgs args) =>
+        KeepScreenAwakeChanged.InvokeAsync(args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase));
+
+    private Task AudibleReadyNotificationChangedInternal(ChangeEventArgs args) =>
+        AudibleReadyNotificationChanged.InvokeAsync(args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase));
+}

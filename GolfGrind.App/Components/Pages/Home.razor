@@ -11,32 +11,44 @@
 <PageTitle>Golf Grind</PageTitle>
 
 <AppToolbar Status="status"
-            Profiles="profiles"
             Clubs="clubs"
-            SelectedProfileId="selectedProfileId"
-            SelectedProfileIdChanged="SetProfileAsync"
             SelectedClubId="selectedClubId"
             SelectedClubIdChanged="SetClubAsync"
-            MonitorMode="@monitorMode"
-            MonitorModeChanged="SetMonitorModeAsync"
             ActiveView="@activeView"
-            ProfileChangeDisabled="ProfileChangeDisabled"
+            ModeLabel="@ActiveModeLabel"
+            MonitorMode="@monitorMode"
             BagGuideActive="bagGuide.IsActive"
             IsConnected="ActiveMonitor.IsConnected"
             MockConnected="MockMonitor.IsConnected"
-            KeepScreenAwake="keepScreenAwake"
-            KeepScreenAwakeChanged="SetKeepScreenAwake"
             AudibleReadyNotification="audibleReadyNotification"
-            AudibleReadyNotificationChanged="SetAudibleReadyNotification"
             MenuOpen="appMenuOpen"
             MenuRequested="ToggleAppMenu"
-            NewSession="StartNewSession"
             ToggleConnection="ToggleConnectionAsync"
             SimulateShot="SimulateShot" />
 
 @if (appMenuOpen)
 {
-    <AppNavigation Views="AppViews" ActiveView="@activeView" ViewSelected="SelectViewAsync" />
+    <AppNavigation ActiveView="@activeView"
+                   ViewSelected="SelectViewAsync"
+                   CloseRequested="CloseAppMenu"
+                   SettingsRequested="OpenAppSettings" />
+}
+
+@if (appSettingsOpen)
+{
+    <AppSettingsPanel Profiles="profiles"
+                      SelectedProfileId="selectedProfileId"
+                      SelectedProfileIdChanged="SetProfileAsync"
+                      MonitorMode="@monitorMode"
+                      MonitorModeChanged="SetMonitorModeAsync"
+                      ProfileChangeDisabled="ProfileChangeDisabled"
+                      IsConnected="ActiveMonitor.IsConnected"
+                      KeepScreenAwake="keepScreenAwake"
+                      KeepScreenAwakeChanged="SetKeepScreenAwake"
+                      AudibleReadyNotification="audibleReadyNotification"
+                      AudibleReadyNotificationChanged="SetAudibleReadyNotification"
+                      NewSession="StartNewSession"
+                      CloseRequested="CloseAppSettings" />
 }
 
 @if (rejectedShotCount > 0 || duplicateShotCount > 0 || !string.IsNullOrWhiteSpace(shotDiagnosticMessage))

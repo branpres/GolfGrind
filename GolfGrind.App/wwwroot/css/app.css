@@ -557,3 +557,99 @@ th { color: #cbd5e1; }
     .active-workspace .practice-live-grid .practice-prompt,
     .active-workspace .practice-live-grid .practice-action-row { grid-column: 1; }
 }
+
+/* v0.24.1 navigation drawer */
+.menu-backdrop {
+    position: fixed;
+    z-index: 100;
+    inset: 0;
+    display: flex;
+    justify-content: flex-end;
+    background: rgba(2, 6, 23, .72);
+    backdrop-filter: blur(3px);
+    animation: menu-backdrop-in 140ms ease-out;
+}
+
+.mode-drawer {
+    display: flex;
+    flex-direction: column;
+    width: min(410px, 88vw);
+    height: 100%;
+    padding: 1rem;
+    overflow-y: auto;
+    color: #f8fafc;
+    background: #0d1728;
+    border-left: 1px solid #334155;
+    box-shadow: -18px 0 50px rgba(0, 0, 0, .38);
+    animation: mode-drawer-in 180ms ease-out;
+}
+
+.mode-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: .25rem .25rem .85rem;
+    border-bottom: 1px solid #273449;
+}
+
+.mode-drawer-header > div { display: grid; gap: .1rem; }
+.mode-drawer-header strong { font-size: 1.3rem; }
+.mode-drawer-header span { color: #cbd5e1; font-size: .86rem; }
+.drawer-close { width: 46px; height: 46px; padding: 0; font-size: 1.6rem; line-height: 1; }
+
+.drawer-group { display: grid; gap: .35rem; margin-bottom: 1rem; }
+.drawer-group h2 {
+    margin: 0;
+    padding: 0 .55rem .2rem;
+    color: #94a3b8;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+}
+
+.drawer-item {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .7rem;
+    width: 100%;
+    min-height: 54px;
+    padding: .65rem .8rem;
+    border-color: transparent;
+    background: transparent;
+    text-align: left;
+}
+
+.drawer-item:hover { background: #17233a; }
+.drawer-item.active { color: #fff; border-color: #3b82f6; background: #1d4ed8; }
+.drawer-icon { display: grid; place-items: center; width: 32px; height: 32px; color: #dbeafe; font-size: 1.25rem; }
+.drawer-current { color: #dbeafe; font-size: .75rem; }
+.drawer-footer { margin-top: auto; padding-top: .8rem; border-top: 1px solid #273449; }
+
+.mode-settings-heading {
+    display: flex;
+    flex: 1 0 100%;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: .55rem;
+    border-bottom: 1px solid #273449;
+}
+.mode-settings-heading > div { display: grid; gap: .1rem; }
+.mode-settings-heading span { color: #cbd5e1; font-size: .8rem; }
+.mode-settings-heading button { width: 42px; height: 42px; padding: 0; font-size: 1.4rem; }
+
+@keyframes mode-drawer-in {
+    from { transform: translateX(28px); opacity: .7; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes menu-backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-backdrop, .mode-drawer { animation: none; }
+}
