@@ -1,5 +1,6 @@
 using System.Text.Json;
 using GolfGrind.Core.Models;
+using GolfGrind.Core.Services;
 
 namespace GolfGrind.App.Services;
 
@@ -162,6 +163,19 @@ public sealed class SessionStorageService
                 Save(session);
         }
         return removed;
+    }
+
+    public int ReplaceCalibrationShots(string sessionType, IEnumerable<GolfClub> clubs)
+    {
+        var result = CalibrationDataReplacement.RemoveForClubs(_sessions, sessionType, clubs);
+        foreach (var session in result.ChangedSessions)
+        {
+            if (session.Shots.Count == 0)
+                DeleteSession(session.Id);
+            else
+                Save(session);
+        }
+        return result.RemovedShots;
     }
 
     public bool? ToggleAnalyticsExclusion(Guid sessionId, DateTimeOffset hitAt)

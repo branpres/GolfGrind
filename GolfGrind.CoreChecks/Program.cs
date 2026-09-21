@@ -15,6 +15,8 @@ var checks = new (string Name, Action Run)[]
     ("analytics dashboard projections", CheckAnalyticsDashboard),
     ("analytics survives regenerated club identifiers", CheckAnalyticsRegeneratedClubId),
     ("guided activity state", CheckGuidedActivityState),
+    ("practice setup values stay mode-specific", CheckPracticeOptionIsolation),
+    ("selected calibration clubs can be replaced independently", CheckCalibrationReplacement),
     ("practice recommends wedge swing", CheckWedgeSwingRecommendation),
     ("approach practice carry and total modes", CheckApproachPractice),
     ("practice mode list", CheckSelectablePracticeModes),
@@ -253,15 +255,67 @@ static void CheckGuidedActivityState()
     ]));
     True(!bagGuide.IsActive);
 
+    var secondWedge = new GolfClub { Name = "LW", Kind = GolfClubKind.Wedge };
     var wedgeGuide = new WedgeMatrixGuideState { ShotsPerCell = 1 };
-    True(wedgeGuide.Start([wedge], wedge.Id, "Half"));
-    Equal("Half", wedgeGuide.Current([wedge])!.SwingType);
-    True(!wedgeGuide.Advance(1));
-    Equal("ThreeQuarter", wedgeGuide.Current([wedge])!.SwingType);
-    True(!wedgeGuide.Advance(1));
-    Equal("Full", wedgeGuide.Current([wedge])!.SwingType);
-    True(wedgeGuide.Advance(1));
+    wedgeGuide.ResetSelection([wedge, secondWedge]);
+    wedgeGuide.Toggle(wedge.Id, false);
+    True(wedgeGuide.Start([wedge, secondWedge]));
+    Equal(secondWedge.Id, wedgeGuide.Current([wedge, secondWedge])!.ClubId);
+    Equal("Half", wedgeGuide.Current([wedge, secondWedge])!.SwingType);
+    True(!wedgeGuide.Advance());
+    Equal("ThreeQuarter", wedgeGuide.Current([wedge, secondWedge])!.SwingType);
+    True(!wedgeGuide.Advance());
+    Equal("Full", wedgeGuide.Current([wedge, secondWedge])!.SwingType);
+    True(wedgeGuide.Advance());
     True(!wedgeGuide.IsActive);
+}
+
+static void CheckPracticeOptionIsolation()
+{
+    var catalog = new PracticeGameOptionsCatalog();
+    catalog.For(PracticeGameKind.TargetPractice).ShotGoal = 7;
+    catalog.For(PracticeGameKind.ApproachPractice).ShotGoal = 14;
+    catalog.For(PracticeGameKind.TargetPractice).ToleranceYards = 4;
+    catalog.For(PracticeGameKind.DistanceLadder).ToleranceYards = 9;
+
+    Equal(7, catalog.For(PracticeGameKind.TargetPractice).ShotGoal);
+    Equal(14, catalog.For(PracticeGameKind.ApproachPractice).ShotGoal);
+    Equal(4d, catalog.For(PracticeGameKind.TargetPractice).ToleranceYards);
+    Equal(9d, catalog.For(PracticeGameKind.DistanceLadder).ToleranceYards);
+    True(!ReferenceEquals(
+        catalog.For(PracticeGameKind.TargetPractice),
+        catalog.For(PracticeGameKind.ApproachPractice)));
+}
+
+static void CheckCalibrationReplacement()
+{
+    var iron = new GolfClub { Name = "7 Iron", Kind = GolfClubKind.Iron };
+    var wedge = new GolfClub { Name = "PW", Kind = GolfClubKind.Wedge };
+    var mapping = new PracticeSession
+    {
+        SessionType = ShotAnalytics.BagMappingSessionType,
+        Shots =
+        [
+            StoredShot.FromShot(ValidShot() with { Club = iron.DisplayName }, iron.Id),
+            StoredShot.FromShot(ValidShot() with { Club = wedge.DisplayName }, wedge.Id)
+        ]
+    };
+    var range = new PracticeSession
+    {
+        SessionType = "Range",
+        Shots = [StoredShot.FromShot(ValidShot() with { Club = iron.DisplayName }, iron.Id)]
+    };
+
+    var result = CalibrationDataReplacement.RemoveForClubs(
+        [mapping, range],
+        ShotAnalytics.BagMappingSessionType,
+        [iron]);
+
+    Equal(1, result.RemovedShots);
+    Equal(1, result.ChangedSessions.Count);
+    Equal(1, mapping.Shots.Count);
+    Equal(wedge.Id, mapping.Shots[0].ClubId!.Value);
+    Equal(1, range.Shots.Count);
 }
 
 static void CheckWedgeSwingRecommendation()

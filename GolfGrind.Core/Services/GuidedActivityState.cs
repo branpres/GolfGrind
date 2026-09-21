@@ -92,6 +92,8 @@ public sealed record WedgeGuideSelection(Guid ClubId, string SwingType);
 public sealed class WedgeMatrixGuideState
 {
     public static readonly IReadOnlyList<string> SwingTypes = ["Half", "ThreeQuarter", "Full"];
+    public HashSet<Guid> SelectedClubIds { get; } = [];
+    public IReadOnlyList<Guid> Sequence { get; private set; } = [];
     public bool IsActive { get; private set; }
     public int ShotsPerCell { get; set; } = 5;
     public int ClubIndex { get; private set; }
@@ -99,30 +101,54 @@ public sealed class WedgeMatrixGuideState
     public int ShotInCell { get; private set; }
     public WedgeMatrixGuideStatus Status { get; private set; }
 
-    public bool Start(IReadOnlyList<GolfClub> wedges, Guid selectedClubId, string selectedSwing)
+    public void ResetSelection(IEnumerable<GolfClub> wedges)
     {
-        if (wedges.Count == 0)
+        SelectedClubIds.Clear();
+        foreach (var wedge in wedges.Where(club => club.Kind == GolfClubKind.Wedge))
+            SelectedClubIds.Add(wedge.Id);
+        ResetRun();
+    }
+
+    public void Toggle(Guid clubId, bool selected)
+    {
+        if (selected) SelectedClubIds.Add(clubId);
+        else SelectedClubIds.Remove(clubId);
+    }
+
+    public void SelectAll(IEnumerable<GolfClub> wedges) => ResetSelection(wedges);
+
+    public void DeselectAll()
+    {
+        SelectedClubIds.Clear();
+        ResetRun();
+    }
+
+    public bool Start(IReadOnlyList<GolfClub> wedges)
+    {
+        Sequence = wedges
+            .Where(wedge => SelectedClubIds.Contains(wedge.Id))
+            .Select(wedge => wedge.Id)
+            .ToList();
+        if (Sequence.Count == 0)
         {
             IsActive = false;
             Status = WedgeMatrixGuideStatus.NeedsWedge;
             return false;
         }
         ShotsPerCell = Math.Clamp(ShotsPerCell, 1, 20);
-        ClubIndex = wedges.ToList().FindIndex(wedge => wedge.Id == selectedClubId);
-        if (ClubIndex < 0) ClubIndex = 0;
-        SwingIndex = SwingTypes.ToList().IndexOf(ShotAnalytics.NormalizeSwing(selectedSwing));
-        if (SwingIndex < 0) SwingIndex = 0;
+        ClubIndex = 0;
+        SwingIndex = 0;
         ShotInCell = 0;
         Status = WedgeMatrixGuideStatus.Active;
         IsActive = true;
         return true;
     }
 
-    public bool Advance(int wedgeCount)
+    public bool Advance()
     {
         if (!IsActive)
             return false;
-        var progress = WedgeMatrixProgression.Advance(ClubIndex, SwingIndex, ShotInCell, wedgeCount, SwingTypes.Count, ShotsPerCell);
+        var progress = WedgeMatrixProgression.Advance(ClubIndex, SwingIndex, ShotInCell, Sequence.Count, SwingTypes.Count, ShotsPerCell);
         ClubIndex = progress.ClubIndex;
         SwingIndex = progress.SwingIndex;
         ShotInCell = progress.ShotInCell;
@@ -134,8 +160,9 @@ public sealed class WedgeMatrixGuideState
     }
 
     public WedgeGuideSelection? Current(IReadOnlyList<GolfClub> wedges) =>
-        ClubIndex < wedges.Count && SwingIndex < SwingTypes.Count
-            ? new(wedges[ClubIndex].Id, SwingTypes[SwingIndex])
+        ClubIndex < Sequence.Count && SwingIndex < SwingTypes.Count &&
+        wedges.FirstOrDefault(wedge => wedge.Id == Sequence[ClubIndex]) is { } wedge
+            ? new(wedge.Id, SwingTypes[SwingIndex])
             : null;
 
     public void Stop(WedgeMatrixGuideStatus status = WedgeMatrixGuideStatus.Stopped)
@@ -146,6 +173,13 @@ public sealed class WedgeMatrixGuideState
 
     public void Reset()
     {
+        SelectedClubIds.Clear();
+        ResetRun();
+    }
+
+    private void ResetRun()
+    {
+        Sequence = [];
         IsActive = false;
         ClubIndex = 0;
         SwingIndex = 0;

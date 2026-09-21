@@ -19,6 +19,8 @@ public partial class Home
         clubs.Add(club);
         if (club.Kind != GolfClubKind.Putter)
             bagGuide.SelectedClubIds.Add(club.Id);
+        if (club.Kind == GolfClubKind.Wedge)
+            wedgeGuide.SelectedClubIds.Add(club.Id);
         selectedClubId = club.Id;
         if (analyticsClubId == Guid.Empty)
             analyticsClubId = club.Id;
@@ -41,6 +43,7 @@ public partial class Home
 
         clubs.RemoveAll(club => club.Id == clubId);
         bagGuide.SelectedClubIds.Remove(clubId);
+        wedgeGuide.SelectedClubIds.Remove(clubId);
         if (clubs.All(club => club.Id != selectedClubId))
             selectedClubId = clubs[0].Id;
         if (clubs.All(club => club.Id != analyticsClubId))
@@ -82,7 +85,7 @@ public partial class Home
         if (wedgeGuide.IsActive) wedgeGuide.Stop();
         practiceGameState = PracticeGameEngine.Start(
             practiceGameState.Game,
-            practiceGameOptions,
+            CurrentPracticeOptions,
             clubs,
             SessionStorage.GetSessions());
         if (!practiceGameState.IsActive)
@@ -143,6 +146,9 @@ public partial class Home
         if (!bagGuide.Start(clubs, DateTimeOffset.Now))
             return;
         if (wedgeGuide.IsActive) wedgeGuide.Stop();
+        SessionStorage.ReplaceCalibrationShots(
+            ShotAnalytics.BagMappingSessionType,
+            clubs.Where(club => bagGuide.Sequence.Contains(club.Id)));
         BeginActivitySession("Bag Mapping", "Bag mapping");
         await ApplyBagGuideSelectionAsync();
     }
@@ -167,11 +173,21 @@ public partial class Home
         return ClubChangedAsync();
     }
 
+    private void ToggleWedgeGuideClub(BagClubToggle toggle) =>
+        wedgeGuide.Toggle(toggle.ClubId, toggle.Selected);
+
+    private void SelectAllWedgeGuideClubs() => wedgeGuide.SelectAll(WedgeClubs);
+
+    private void DeselectAllWedgeGuideClubs() => wedgeGuide.DeselectAll();
+
     private async Task StartWedgeGuideAsync()
     {
-        if (!wedgeGuide.Start(WedgeClubs, selectedClubId, selectedSwingType))
+        if (!wedgeGuide.Start(WedgeClubs))
             return;
         if (bagGuide.IsActive) bagGuide.Stop();
+        SessionStorage.ReplaceCalibrationShots(
+            ShotAnalytics.WedgeMatrixSessionType,
+            WedgeClubs.Where(wedge => wedgeGuide.Sequence.Contains(wedge.Id)));
         BeginActivitySession("Wedge Matrix", "Wedge matrix");
         await ApplyWedgeGuideSelectionAsync();
     }
@@ -182,7 +198,7 @@ public partial class Home
     {
         if (!wedgeGuide.IsActive)
             return;
-        if (wedgeGuide.Advance(WedgeClubs.Count))
+        if (wedgeGuide.Advance())
             return;
         await ApplyWedgeGuideSelectionAsync();
     }

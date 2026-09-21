@@ -89,6 +89,14 @@ public sealed class PracticeGameOptions
     }
 }
 
+public sealed class PracticeGameOptionsCatalog
+{
+    private readonly Dictionary<PracticeGameKind, PracticeGameOptions> _options =
+        PracticeGameNames.SelectableGames.ToDictionary(game => game, _ => new PracticeGameOptions());
+
+    public PracticeGameOptions For(PracticeGameKind game) => _options[game];
+}
+
 public sealed record PracticeGameSettingsSnapshot(
     double FixedTargetYards,
     int ShotGoal,

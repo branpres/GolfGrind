@@ -33,7 +33,7 @@ public partial class Home
     private string? bagMessage;
     private readonly BagMappingGuideState bagGuide = new();
     private double suggestedDistanceYards = 150;
-    private readonly PracticeGameOptions practiceGameOptions = new();
+    private readonly PracticeGameOptionsCatalog practiceOptions = new();
     private PracticeGameState practiceGameState = new();
     private PracticeGameSummary? pendingPracticeSummary;
     private readonly WedgeMatrixGuideState wedgeGuide = new();
@@ -74,6 +74,7 @@ public partial class Home
         }
     }
     private IReadOnlyList<GolfClub> WedgeClubs => clubs.Where(club => club.Kind == GolfClubKind.Wedge).ToList();
+    private PracticeGameOptions CurrentPracticeOptions => practiceOptions.For(practiceGameState.Game);
     private string BagGuidePrompt => bagGuide.CurrentClubId is { } clubId
         ? clubs.FirstOrDefault(club => club.Id == clubId)?.DisplayName ?? "Unknown club"
         : "Complete";
@@ -100,7 +101,9 @@ public partial class Home
         : "Complete";
     private string? WedgeGuideMessage => wedgeGuide.Status switch
     {
-        WedgeMatrixGuideStatus.NeedsWedge => "Add at least one wedge to your bag first.",
+        WedgeMatrixGuideStatus.NeedsWedge => WedgeClubs.Count == 0
+            ? "Add at least one wedge to your bag first."
+            : "Select at least one wedge to capture.",
         WedgeMatrixGuideStatus.Stopped => "Guided matrix stopped. Recorded shots remain saved.",
         WedgeMatrixGuideStatus.Completed => "Guided wedge matrix complete.",
         WedgeMatrixGuideStatus.LeftView => "Guided matrix stopped because you left the Wedge Matrix section.",
@@ -119,6 +122,7 @@ public partial class Home
             ?? clubs[0].Id;
         analyticsClubId = selectedClubId;
         bagGuide.ResetSelection(clubs);
+        wedgeGuide.ResetSelection(WedgeClubs);
         MonitorWorkspace.SquareMonitor.ShotReceived += OnShotReceived;
         MonitorWorkspace.SquareMonitor.StatusChanged += OnStatusChanged;
         MockMonitor.ShotReceived += OnShotReceived;
@@ -131,7 +135,6 @@ public partial class Home
         await ClubChangedAsync();
     }
 
-    private void SetSwingType(string swingType) => selectedSwingType = swingType;
     private void SetWedgeGuideShotsPerCell(int value) => wedgeGuide.ShotsPerCell = value;
     private void SetBagGuideShotsPerClub(int value) => bagGuide.ShotsPerClub = value;
     private void SetSuggestedDistance(double value) => suggestedDistanceYards = value;

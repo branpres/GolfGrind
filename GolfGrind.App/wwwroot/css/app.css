@@ -209,9 +209,6 @@ button.exclude-shot.excluded { color: #bbf7d0; border-color: #166534; }
 .fairway-pattern-label { fill: #94a3b8; font-size: 12px; }
 .session-toast { position: fixed; right: 1rem; bottom: 1rem; z-index: 50; max-width: min(520px, calc(100vw - 2rem)); padding: .85rem 1rem; color: #dcfce7; background: #14532d; border: 1px solid #22c55e; border-radius: .7rem; box-shadow: 0 12px 30px rgba(0, 0, 0, .35); }
 .wedge-guide-setup { margin-bottom: .8rem; }
-.wedge-shot-controls { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; margin-bottom: .8rem; padding: .8rem; background: #0b1220; border: 1px solid #243044; border-radius: .8rem; }
-.wedge-shot-controls label { display: grid; gap: .25rem; color: #94a3b8; font-size: .8rem; }
-.control-group-label { flex-basis: 100%; color: #cbd5e1; font-size: .82rem; font-weight: 700; }
 .dispersion-panel { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #243044; }
 .dispersion-chart { display: block; width: 100%; max-width: 720px; height: auto; margin: auto; }
 .dispersion-bg { fill: #0d2a1a; }
@@ -478,7 +475,6 @@ main { max-width: 1800px; padding: .75rem 1rem 1.5rem; }
 .compact-shot-metric > span,
 .practice-score span,
 .practice-setup label,
-.wedge-shot-controls label,
 .analytics-summary > span,
 .session-stat span { color: #cbd5e1; font-size: .82rem; }
 

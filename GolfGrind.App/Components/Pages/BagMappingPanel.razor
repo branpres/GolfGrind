@@ -21,8 +21,9 @@
             </div>
             <div class="practice-setup">
                 <label><span>Shots per club</span><input type="number" min="1" max="30" value="@ShotsPerClub" @onchange="ChangeShotsPerClub" /></label>
-                <button class="primary" @onclick="StartGuide">Start bag mapping</button>
+                <button class="primary" @onclick="StartGuide">Start / redo selected clubs</button>
             </div>
+            <div class="combine-note">Starting replaces earlier Bag Mapping shots for the selected clubs. Unselected clubs keep their current mapping.</div>
         }
         @if (GuideActive)
         {

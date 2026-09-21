@@ -94,6 +94,7 @@ public partial class Home
         MonitorWorkspace.ResetProcessing();
         wedgeGuide.Reset();
         bagGuide.ResetSelection(clubs);
+        wedgeGuide.ResetSelection(WedgeClubs);
     }
 
     private void SaveActiveBag() => BagService.Save(loadedProfileId, clubs);

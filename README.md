@@ -2,7 +2,7 @@
 
 Windows-first .NET 10 MAUI Blazor Hybrid application for a Square Golf launch monitor.
 
-## Current prototype (v0.24.4)
+## Current prototype (v0.24.6)
 
 This build reconstructs the accepted v0.14–v0.16 work on top of the preserved v0.13 archive.
 
@@ -77,6 +77,9 @@ This build reconstructs the accepted v0.14–v0.16 work on top of the preserved 
 - Mode-specific Practice setup components plus separate live-score and Fairway Finder plot components
 - Core-owned analytics dashboard projections and Bag Mapping/Wedge Matrix guide state machines
 - App services for launch-monitor workspace state and activity/session lifecycle coordination
+- Independent setup values for every Practice mode, so shared concepts such as shot count and scoring radius no longer leak between modes
+- Selective Bag Mapping and Wedge Matrix restarts that replace calibration shots only for the chosen clubs or wedges
+- Wedge Matrix Select All, Deselect All, and per-wedge selection before a guided run
 
 ## Application structure
 
@@ -87,6 +90,20 @@ This build reconstructs the accepted v0.14–v0.16 work on top of the preserved 
 - Storage, backup, profile and launch-monitor implementations remain behind services and interfaces.
 
 This is a prototype build. Session and backup compatibility with earlier builds is intentionally not guaranteed while the data model is still changing.
+
+### v0.24.6 wedge matrix setup cleanup
+
+- Removes the redundant manual wedge and swing selection controls from Wedge Matrix setup.
+- Uses the selected-wedge checklist as the single setup path; the guide chooses the current wedge and advances through half, three-quarter, and full swings automatically.
+
+### v0.24.5 independent practice setup and selective calibration restarts
+
+- Gives every Practice mode its own setup state so moving a slider in one mode does not alter another mode.
+- Adds a Core regression check covering independent shot-count and tolerance values.
+- Makes Bag Mapping's selected-club workflow an explicit redo: starting replaces older Bag Mapping shots only for the selected clubs.
+- Adds Select All, Deselect All, and individual wedge selection to Wedge Matrix.
+- Makes a selected Wedge Matrix run begin at half swing and replace older matrix shots only for the selected wedges.
+- Keeps all unselected Bag Mapping clubs and Wedge Matrix wedges unchanged.
 
 ### v0.24.4 complete-check correction and directional flight symmetry
 

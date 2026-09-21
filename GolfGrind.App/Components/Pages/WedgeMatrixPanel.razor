@@ -5,36 +5,28 @@
             <div class="section-heading">
                 <div>
                     <h2>Set up wedge matrix</h2>
-                    <span class="muted">Choose a starting combination. The guide continues through ½, ¾, and full swings.</span>
+                    <span class="muted">Choose the wedges to capture. Each selected wedge runs through ½, ¾, and full swings.</span>
                 </div>
             </div>
             @if (Wedges.Count > 0)
             {
-                <div class="wedge-shot-controls">
-                    <div class="control-group-label">Starting combination / manual recording</div>
-                    <label>
-                        <span>Wedge</span>
-                        <select aria-label="Wedge" value="@SelectedClubId" @onchange="ChangeClubAsync">
-                            @foreach (var wedge in Wedges)
-                            {
-                                <option value="@wedge.Id">@wedge.DisplayName</option>
-                            }
-                        </select>
-                    </label>
-                    <label>
-                        <span>Swing length</span>
-                        <select aria-label="Wedge swing length" @bind:get="SelectedSwing" @bind:set="ChangeSwingAsync">
-                            <option value="Half">½ swing</option>
-                            <option value="ThreeQuarter">¾ swing</option>
-                            <option value="Full">Full swing</option>
-                        </select>
-                    </label>
+                <div class="selection-actions">
+                    <button @onclick="SelectAll">Select all</button>
+                    <button @onclick="DeselectAll">Deselect all</button>
+                    <span class="muted">@SelectedClubIds.Count selected</span>
+                </div>
+                <div class="club-checklist">
+                    @foreach (var wedge in Wedges)
+                    {
+                        <label><input type="checkbox" checked="@SelectedClubIds.Contains(wedge.Id)" @onchange="args => ToggleClub.InvokeAsync(new BagClubToggle(wedge.Id, args.Value is true))" /> @wedge.DisplayName</label>
+                    }
                 </div>
             }
             <div class="practice-setup wedge-guide-setup">
                 <label><span>Shots per combination</span><input type="number" min="1" max="20" value="@ShotsPerCell" @onchange="ChangeShotsPerCellAsync" /></label>
-                <button class="primary" @onclick="StartGuide">Start from selected</button>
+                <button class="primary" @onclick="StartGuide">Start / redo selected wedges</button>
             </div>
+            <div class="combine-note">Starting replaces earlier Wedge Matrix shots for the selected wedges. Unselected wedges keep their current matrix.</div>
         }
         @if (GuideActive)
         {
@@ -85,23 +77,19 @@
     [Parameter] public ShotData? LastShot { get; set; }
     [Parameter, EditorRequired] public IReadOnlyList<GolfClub> Clubs { get; set; } = [];
     [Parameter, EditorRequired] public IReadOnlyList<PracticeSession> Sessions { get; set; } = [];
-    [Parameter] public Guid SelectedClubId { get; set; }
-    [Parameter] public string SelectedSwing { get; set; } = "Half";
+    [Parameter, EditorRequired] public IReadOnlySet<Guid> SelectedClubIds { get; set; } = new HashSet<Guid>();
     [Parameter] public bool GuideActive { get; set; }
     [Parameter] public int ShotsPerCell { get; set; }
     [Parameter] public int ShotInCell { get; set; }
     [Parameter] public string GuidePrompt { get; set; } = "";
     [Parameter] public string? Message { get; set; }
-    [Parameter] public EventCallback<Guid> SelectedClubIdChanged { get; set; }
-    [Parameter] public EventCallback<string> SelectedSwingChanged { get; set; }
     [Parameter] public EventCallback<int> ShotsPerCellChanged { get; set; }
+    [Parameter] public EventCallback SelectAll { get; set; }
+    [Parameter] public EventCallback DeselectAll { get; set; }
+    [Parameter] public EventCallback<BagClubToggle> ToggleClub { get; set; }
     [Parameter] public EventCallback StartGuide { get; set; }
     [Parameter] public EventCallback StopGuide { get; set; }
     private IReadOnlyList<GolfClub> Wedges => Clubs.Where(club => club.Kind == GolfClubKind.Wedge).ToList();
-    private Task ChangeClubAsync(ChangeEventArgs args) => Guid.TryParse(args.Value?.ToString(), out var id)
-        ? SelectedClubIdChanged.InvokeAsync(id)
-        : Task.CompletedTask;
-    private Task ChangeSwingAsync(string swing) => SelectedSwingChanged.InvokeAsync(string.IsNullOrWhiteSpace(swing) ? "Half" : swing);
     private Task ChangeShotsPerCellAsync(ChangeEventArgs args) => int.TryParse(args.Value?.ToString(), out var value)
         ? ShotsPerCellChanged.InvokeAsync(value)
         : Task.CompletedTask;
