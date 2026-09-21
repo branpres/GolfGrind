@@ -68,18 +68,28 @@ Check(
     "low-flight rollout exceeds the former carry-ratio cap without becoming implausible");
 
 var wedge = new GolfClub { Name = "Wedge", Kind = GolfClubKind.Wedge, LoftDegrees = 54 };
-var analyticsSession = new PracticeSession();
-analyticsSession.Shots.Add(StoredShot.FromShot(calculatedShot with { Club = wedge.DisplayName, CarryYards = 88, SwingType = "Full" }, wedge.Id));
-analyticsSession.Shots.Add(StoredShot.FromShot(calculatedShot with { Club = wedge.DisplayName, CarryYards = 92, SwingType = "Full" }, wedge.Id));
-analyticsSession.Shots.Add(StoredShot.FromShot(calculatedShot with { Club = wedge.DisplayName, CarryYards = 61, SwingType = "Half" }, wedge.Id));
-var wedgeStats = ShotAnalytics.CalculateBag([wedge], [analyticsSession]).Single();
+var bagMappingSession = new PracticeSession { SessionType = ShotAnalytics.BagMappingSessionType };
+bagMappingSession.Shots.Add(StoredShot.FromShot(calculatedShot with { Club = wedge.DisplayName, CarryYards = 88, SwingType = "Full" }, wedge.Id));
+bagMappingSession.Shots.Add(StoredShot.FromShot(calculatedShot with { Club = wedge.DisplayName, CarryYards = 92, SwingType = "Full" }, wedge.Id));
+bagMappingSession.Shots.Add(StoredShot.FromShot(calculatedShot with { Club = wedge.DisplayName, CarryYards = 61, SwingType = "Half" }, wedge.Id));
+var matrixSession = new PracticeSession { SessionType = ShotAnalytics.WedgeMatrixSessionType };
+matrixSession.Shots.Add(StoredShot.FromShot(calculatedShot with { Club = wedge.DisplayName, CarryYards = 88, SwingType = "Full" }, wedge.Id));
+matrixSession.Shots.Add(StoredShot.FromShot(calculatedShot with { Club = wedge.DisplayName, CarryYards = 92, SwingType = "Full" }, wedge.Id));
+matrixSession.Shots.Add(StoredShot.FromShot(calculatedShot with { Club = wedge.DisplayName, CarryYards = 61, SwingType = "Half" }, wedge.Id));
+var calibrationSessions = new[] { bagMappingSession, matrixSession };
+var wedgeStats = ShotAnalytics.CalculateBag([wedge], calibrationSessions).Single();
 Check(wedgeStats.ShotCount == 2 && wedgeStats.MedianCarryYards == 90, "bag mapping uses full wedge swings");
-var halfWedge = ShotAnalytics.CalculateWedgeCell(analyticsSession.Shots, "Half");
+var halfWedge = ShotAnalytics.CalculateWedgeCell(
+    ShotAnalytics.WedgeMatrixShotsForClub(wedge, calibrationSessions),
+    "Half");
 Check(halfWedge.ShotCount == 1 && halfWedge.MedianCarryYards == 61, "wedge matrix groups swing length");
-analyticsSession.Shots[1] = analyticsSession.Shots[1] with { ExcludedFromAnalytics = true };
-var filteredWedgeStats = ShotAnalytics.CalculateBag([wedge], [analyticsSession]).Single();
+bagMappingSession.Shots[1] = bagMappingSession.Shots[1] with { ExcludedFromAnalytics = true };
+var filteredWedgeStats = ShotAnalytics.CalculateBag([wedge], calibrationSessions).Single();
 Check(filteredWedgeStats.ShotCount == 1 && filteredWedgeStats.MedianCarryYards == 88, "excluded shot omitted from analytics");
-var filteredFullWedge = ShotAnalytics.CalculateWedgeCell(analyticsSession.Shots, "Full");
+matrixSession.Shots[1] = matrixSession.Shots[1] with { ExcludedFromAnalytics = true };
+var filteredFullWedge = ShotAnalytics.CalculateWedgeCell(
+    ShotAnalytics.WedgeMatrixShotsForClub(wedge, calibrationSessions),
+    "Full");
 Check(filteredFullWedge.ShotCount == 1 && filteredFullWedge.MedianCarryYards == 88, "excluded shot omitted from wedge matrix");
 
 var storedPracticeShot = StoredShot.FromShot(calculatedShot with

@@ -2,7 +2,7 @@
 
 Windows-first .NET 10 MAUI Blazor Hybrid application for a Square Golf launch monitor.
 
-## Current prototype (v0.24.3)
+## Current prototype (v0.24.4)
 
 This build reconstructs the accepted v0.14–v0.16 work on top of the preserved v0.13 archive.
 
@@ -87,6 +87,13 @@ This build reconstructs the accepted v0.14–v0.16 work on top of the preserved 
 - Storage, backup, profile and launch-monitor implementations remain behind services and interfaces.
 
 This is a prototype build. Session and backup compatibility with earlier builds is intentionally not guaranteed while the data model is still changing.
+
+### v0.24.4 complete-check correction and directional flight symmetry
+
+- Updates protocol-check calibration fixtures to use dedicated Bag Mapping and Wedge Matrix sessions, matching the production analytics separation rules.
+- Rotates the ball's spin axis with launch direction instead of leaving it fixed to the screen coordinate system.
+- Restores equal radial carry for otherwise identical shots aimed in different directions and removes exaggerated lateral movement from off-line launches.
+- Advances retained calculation metadata to `BallFlightCalculator/5`.
 
 ### v0.24.3 low-flight regression-check correction
 

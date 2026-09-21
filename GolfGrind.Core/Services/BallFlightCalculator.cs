@@ -46,9 +46,14 @@ public static class BallFlightCalculator
             speed * Math.Sin(elevation));
         var position = new Vector3(0, 0, 0.02);
 
-        // Backspin points along +X. Rotating that axis toward -Z models the
-        // measured spin-axis tilt and produces the corresponding side force.
-        var spinDirection = Normalize(new Vector3(Math.Cos(spinAxis), 0, -Math.Sin(spinAxis)));
+        // Backspin points to the shot's right, not the screen's fixed +X axis.
+        // Rotate that local axis with launch direction before applying measured
+        // spin-axis tilt; otherwise identical shots aimed left or right produce
+        // different radial carries and exaggerated lateral movement.
+        var spinDirection = Normalize(new Vector3(
+            Math.Cos(spinAxis) * Math.Cos(azimuth),
+            -Math.Cos(spinAxis) * Math.Sin(azimuth),
+            -Math.Sin(spinAxis)));
         var spinRadiansPerSecond = totalSpin * RpmToRadiansPerSecond;
         var spinRatio = Math.Clamp(BallRadiusMeters * spinRadiansPerSecond / speed, 0, 0.4);
 
